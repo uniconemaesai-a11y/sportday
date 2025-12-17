@@ -8,7 +8,7 @@ import BroadcastCard from './components/BroadcastCard';
 import MatchResultCard from './components/MatchResultCard';
 import OverallPodium from './components/OverallPodium';
 import AllMatchesPrintView from './components/AllMatchesPrintView';
-import { Home, Trophy, Medal, ChevronLeft, RefreshCw, Database, Check, ListFilter, Printer, FileText, X, ChevronRight, Heart, Sparkles, Activity, Star, Zap, Loader2, Search, Filter, Layers, Target, Dumbbell, Users, User, LayoutGrid, Trash2, AlertTriangle, TrendingUp, Award, ListChecks } from 'lucide-react';
+import { Home, Trophy, Medal, ChevronLeft, RefreshCw, Database, Check, ListFilter, Printer, FileText, X, ChevronRight, Heart, Sparkles, Activity, Star, Zap, Loader2, Search, Filter, Layers, Target, Dumbbell, Users, User, LayoutGrid, Trash2, AlertTriangle, TrendingUp, Award, ListChecks, TableProperties } from 'lucide-react';
 
 const App = () => {
   const [activeTab, setActiveTab] = useState<'home' | 'sports' | 'ranking'>('home');
@@ -260,6 +260,14 @@ const App = () => {
                         >
                             <Printer size={16} />
                             <span>พิมพ์ผลทุกกีฬา</span>
+                        </button>
+
+                        <button 
+                            onClick={handleDirectPrintAllResults}
+                            className="flex items-center gap-2 text-[11px] font-black px-5 py-3 rounded-2xl bg-indigo-500 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all active:scale-95"
+                        >
+                            <TableProperties size={16} />
+                            <span>พิมพ์ตารางสายแข่ง</span>
                         </button>
                         
                         <button 
@@ -671,7 +679,7 @@ const App = () => {
                     <div className="bg-white/10 p-8 rounded-[3rem] mb-8 shadow-inner ring-4 ring-white/5">{isPrinting ? <Loader2 size={64} className="animate-spin" /> : <Printer size={64} />}</div>
                     <h3 className="text-5xl font-black mb-3 tracking-tight italic">พิมพ์รายงานรวม</h3>
                     <p className="text-blue-200 font-black opacity-60 uppercase tracking-[0.3em] text-xs italic">Academic Record ๒๕๖๘</p>
-                    {!isPrinting && <button onClick={() => setShowPrintModal(false)} className="absolute top-10 right-10 text-white/40 hover:text-white transition-colors"><X size={40} /></button>}
+                    {!isPrinting && <button onClick={() => setShowPrintModal(true)} className="absolute top-10 right-10 text-white/40 hover:text-white transition-colors"><X size={40} /></button>}
                 </div>
                 <div className="p-12">
                     <button onClick={handlePrintMasterReport} disabled={isPrinting} className="w-full flex items-center justify-between bg-blue-600 text-white p-10 rounded-[3rem] shadow-[0_25px_50px_rgba(37,99,235,0.4)] hover:scale-105 active:scale-95 transition-all disabled:opacity-50 group">
@@ -715,11 +723,12 @@ const App = () => {
         )}
       </main>
 
-      <footer className="w-full py-10 text-center no-print pb-[150px]">
+      {/* Footer with Subtle Copyright */}
+      <footer className="w-full py-10 text-center no-print pb-[120px]">
           <p className="text-gray-400/60 text-[10px] font-black uppercase tracking-[0.2em] italic">พัฒนาและออกแบบโดย Krukai &copy; 2025</p>
       </footer>
 
-      {/* NEW Ergonomic Thumb-Curve Navigation Bar (80px) */}
+      {/* NEW Ergonomic Thumb-Curve Navigation Bar (80px) with Vibrant Pastel Colors */}
       <nav className="fixed bottom-0 left-0 right-0 w-full h-[80px] z-[90] print:hidden no-print">
         <div className="absolute inset-0 w-full h-full pointer-events-none">
             {/* Smooth Thumb Curve Path */}
@@ -733,7 +742,7 @@ const App = () => {
         </div>
         
         <div className="relative h-full flex items-center justify-around px-8 max-w-2xl mx-auto">
-            {/* Home Tab */}
+            {/* Home Tab - Pastel Blue */}
             <button 
                 onClick={() => { setActiveTab('home'); setSelectedSportId(null); setSearchQuery(''); }} 
                 className="flex flex-col items-center justify-center w-20 relative transition-all duration-500"
@@ -744,7 +753,7 @@ const App = () => {
                 <span className={`absolute bottom-2 text-[9px] font-black uppercase tracking-widest transition-all duration-500 ${activeTab === 'home' ? 'text-blue-500 opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>Home</span>
             </button>
 
-            {/* Sports Tab */}
+            {/* Sports Tab - Pastel Orange */}
             <button 
                 onClick={() => { setActiveTab('sports'); setSelectedSportId(null); }} 
                 className="flex flex-col items-center justify-center w-20 relative transition-all duration-500"
@@ -755,7 +764,7 @@ const App = () => {
                 <span className={`absolute bottom-2 text-[9px] font-black uppercase tracking-widest transition-all duration-500 ${activeTab === 'sports' ? 'text-orange-500 opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>Arena</span>
             </button>
 
-            {/* Ranking Tab */}
+            {/* Ranking Tab - Pastel Pink */}
             <button 
                 onClick={() => { setActiveTab('ranking'); setSelectedSportId(null); setSearchQuery(''); }} 
                 className="flex flex-col items-center justify-center w-20 relative transition-all duration-500"
