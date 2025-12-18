@@ -448,7 +448,6 @@ const App = () => {
                                 <span>ยืนยันการล้าง</span>
                             </button>
                         </div>
-                        <p className="mt-6 text-[10px] font-black text-gray-300 uppercase tracking-widest italic">Passcode: 1 7 2 2</p>
                     </div>
                 </div>
             </div>
@@ -692,3 +691,4 @@ const App = () => {
 };
 
 export default App;
+
