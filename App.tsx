@@ -46,7 +46,7 @@ const App = () => {
                 saveToLocal(merged);
             } else {
                 setTournaments(initialData);
-                const allMatches = Object.values(initialData).flatMap(t => t.matches);
+                const allMatches = (Object.values(initialData) as SportTournament[]).flatMap(t => t.matches);
                 await saveToCloud(allMatches);
                 saveToLocal(initialData);
             }
@@ -115,7 +115,7 @@ const App = () => {
       setTournaments(initialData);
       saveToLocal(initialData);
       
-      const allMatches = Object.values(initialData).flatMap(t => t.matches);
+      const allMatches = (Object.values(initialData) as SportTournament[]).flatMap(t => t.matches);
       await saveToCloud(allMatches);
       
       setIsSyncing(false);
@@ -171,7 +171,7 @@ const App = () => {
         stats[team.id] = { team, gold: 0, silver: 0, bronze: 0, points: 0, total: 0 };
     });
 
-    Object.values(tournaments).forEach(t => {
+    (Object.values(tournaments) as SportTournament[]).forEach(t => {
         if (t.championId && stats[t.championId]) { 
             stats[t.championId].gold++; 
             stats[t.championId].points += 3;
@@ -193,7 +193,7 @@ const App = () => {
   }, [tournaments]);
 
   const finishedSportsBreakdown = useMemo(() => {
-    return Object.values(tournaments)
+    return (Object.values(tournaments) as SportTournament[])
       .filter(t => t.championId)
       .sort((a, b) => a.sportConfig.name.localeCompare(b.sportConfig.name));
   }, [tournaments]);
@@ -606,14 +606,14 @@ const App = () => {
                 <MedalTable standings={standingsData} />
             </div>
 
-            {Object.values(tournaments).filter(t => t.championId).length > 0 && (
+            {(Object.values(tournaments) as SportTournament[]).filter(t => t.championId).length > 0 && (
                 <div className="mt-24">
                     <div className="flex items-center gap-4 mb-10">
                         <div className="h-10 w-2 bg-pink-500 rounded-full"></div>
                         <h3 className="text-3xl font-black text-gray-800 italic">ผลการแข่งขันล่าสุด</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {Object.values(tournaments)
+                        {(Object.values(tournaments) as SportTournament[])
                             .filter(t => t.championId)
                             .sort((a, b) => 0.5 - Math.random())
                             .map((t, idx) => (
