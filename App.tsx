@@ -266,11 +266,11 @@ const App = () => {
                     </div>
                 </div>
                 <div className="text-left">
-                    <h1 className="text-white font-black text-4xl md:text-7xl drop-shadow-2xl tracking-tight italic leading-none">กีฬาสีสัมพันธ์ ๒๕๖๘</h1>
+                    <h1 className="text-white font-black text-4xl md:text-7xl drop-shadow-2xl tracking-tight italic leading-none">การจัดการแข่งขันกีฬาภายในสถานศึกษา</h1>
                     <div className="flex flex-wrap items-center gap-3 mt-4">
                         <div className="bg-yellow-400 p-1.5 rounded-full shadow-lg"><Sparkles className="text-white animate-pulse" size={18} /></div>
                         <div className="bg-black/20 backdrop-blur-md px-6 py-1.5 rounded-full border-2 border-white/20">
-                            <h2 className="text-white font-black text-base md:text-xl tracking-wide uppercase">โรงเรียนเทศบาล ๑ วัดพรหมวิหาร</h2>
+                            <h2 className="text-white font-black text-base md:text-xl tracking-wide uppercase">สังกัดเทศบาลตำบลแม่สาย ประจำปีการศึกษา 2568</h2>
                         </div>
                     </div>
                 </div>
