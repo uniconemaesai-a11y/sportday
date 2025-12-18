@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Team } from '../types';
-import { Trophy, Medal, Star, Crown } from 'lucide-react';
+import { Trophy, Medal, Star, Crown, Sparkles, Activity, Timer } from 'lucide-react';
 
 interface Standing {
   team: Team;
@@ -8,6 +9,9 @@ interface Standing {
   silver: number;
   bronze: number;
   total: number;
+  sportsPoints: number;
+  athleticsPoints: number;
+  points: number;
 }
 
 interface OverallPodiumProps {
@@ -15,101 +19,105 @@ interface OverallPodiumProps {
 }
 
 const OverallPodium: React.FC<OverallPodiumProps> = ({ standings }) => {
-  // Get Top 3
   const rank1 = standings[0];
   const rank2 = standings[1];
   const rank3 = standings[2];
 
-  // Helper for rendering a single podium stand
   const PodiumStand = ({ standing, rank }: { standing?: Standing; rank: 1 | 2 | 3 }) => {
-    if (!standing || standing.total === 0) {
-        // Empty state placeholder
+    if (!standing || standing.points === 0) {
         return (
-             <div className="flex flex-col items-center justify-end w-1/3 h-full opacity-50">
-                <div className="w-16 h-16 rounded-full bg-gray-100 mb-2"></div>
-                <div className={`w-full rounded-t-2xl bg-gray-100 ${rank === 1 ? 'h-48' : rank === 2 ? 'h-32' : 'h-24'}`}></div>
+             <div className="flex flex-col items-center justify-end w-1/3 h-full opacity-30">
+                <div className="w-16 h-16 rounded-full bg-gray-100 mb-4 border-2 border-dashed border-gray-300"></div>
+                <div className={`w-full rounded-t-[2.5rem] bg-gray-50 border-2 border-dashed border-gray-200 ${rank === 1 ? 'h-56' : rank === 2 ? 'h-40' : 'h-32'}`}></div>
              </div>
         );
     }
 
-    const { team, total } = standing;
+    const { team, points, sportsPoints, athleticsPoints } = standing;
     
-    // Config based on rank
     let heightClass = '';
     let bgClass = '';
     let borderClass = '';
     let shadowClass = '';
     let iconColor = '';
+    let metallicGrad = '';
     
     if (rank === 1) {
-        heightClass = 'h-44 md:h-56';
-        bgClass = 'bg-gradient-to-b from-yellow-200 to-yellow-300';
+        heightClass = 'h-56 md:h-72';
+        bgClass = 'bg-gradient-to-b from-yellow-200 via-yellow-300 to-yellow-400';
         borderClass = 'border-yellow-100';
-        shadowClass = 'shadow-[0_10px_20px_rgba(250,204,21,0.3)]';
-        iconColor = 'text-yellow-600';
+        shadowClass = 'shadow-[0_20px_60px_rgba(250,204,21,0.4)]';
+        iconColor = 'text-yellow-700';
+        metallicGrad = 'from-yellow-400 via-yellow-100 to-yellow-500';
     } else if (rank === 2) {
-        heightClass = 'h-32 md:h-40';
-        bgClass = 'bg-gradient-to-b from-slate-200 to-slate-300';
+        heightClass = 'h-40 md:h-52';
+        bgClass = 'bg-gradient-to-b from-slate-200 via-slate-300 to-slate-400';
         borderClass = 'border-slate-100';
-        shadowClass = 'shadow-[0_10px_20px_rgba(148,163,184,0.3)]';
-        iconColor = 'text-slate-500';
+        shadowClass = 'shadow-[0_20px_50px_rgba(148,163,184,0.3)]';
+        iconColor = 'text-slate-600';
+        metallicGrad = 'from-slate-300 via-slate-50 to-slate-400';
     } else {
-        heightClass = 'h-24 md:h-28';
-        bgClass = 'bg-gradient-to-b from-orange-200 to-orange-300';
+        heightClass = 'h-32 md:h-40';
+        bgClass = 'bg-gradient-to-b from-orange-200 via-orange-300 to-orange-400';
         borderClass = 'border-orange-100';
-        shadowClass = 'shadow-[0_10px_20px_rgba(251,146,60,0.3)]';
-        iconColor = 'text-orange-600';
+        shadowClass = 'shadow-[0_20px_40px_rgba(251,146,60,0.3)]';
+        iconColor = 'text-orange-700';
+        metallicGrad = 'from-orange-400 via-orange-50 to-orange-500';
     }
 
     return (
-      <div className={`flex flex-col items-center justify-end w-1/3 relative z-10 ${rank === 1 ? '-mt-6 z-20' : ''}`}>
+      <div className={`flex flex-col items-center justify-end w-1/3 relative transition-all duration-1000 ${rank === 1 ? 'z-30 scale-110 -mb-4' : 'z-10'}`}>
         
-        {/* Crown for Winner */}
         {rank === 1 && (
-            <div className="animate-bounce mb-1">
-                <Crown size={32} className="text-yellow-500 fill-yellow-300 drop-shadow-sm" />
+            <div className="animate-bounce mb-3 relative">
+                <Crown size={48} className="text-yellow-500 fill-yellow-400 drop-shadow-lg" />
+                <Sparkles size={20} className="absolute -top-2 -right-2 text-yellow-300 animate-pulse" />
             </div>
         )}
 
-        {/* Avatar */}
-        <div className="relative mb-3 group">
-             {/* เปลี่ยนจาก substring(0,1) เป็นชื่อสีเต็ม และลดขนาด font */}
-             <div className={`w-16 h-16 md:w-24 md:h-24 rounded-full border-4 border-white shadow-lg flex items-center justify-center text-white text-xs md:text-sm font-black ${team.tailwindBg} transform transition-transform group-hover:scale-110 px-1 text-center leading-tight`}>
+        {/* Team Avatar */}
+        <div className="relative mb-6 group cursor-default">
+             <div className={`absolute -inset-6 rounded-full blur-3xl opacity-30 ${team.tailwindBg} group-hover:opacity-50 transition-opacity`}></div>
+             <div className={`relative w-20 h-20 md:w-28 md:h-28 rounded-full border-4 border-white shadow-2xl flex items-center justify-center text-white text-xs md:text-base font-black ${team.tailwindBg} transform transition-transform group-hover:scale-110 px-2 text-center leading-tight ring-[10px] ring-white/30`}>
                 {team.name.split(' ')[0]}
              </div>
-             {/* Rank Badge */}
-             <div className={`absolute -bottom-2 -right-2 w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-sm font-bold shadow-sm ${rank === 1 ? 'bg-yellow-400 text-yellow-900' : rank === 2 ? 'bg-slate-300 text-slate-700' : 'bg-orange-300 text-orange-800'}`}>
+             <div className={`absolute -bottom-3 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full border-4 border-white flex items-center justify-center text-lg font-black shadow-xl bg-gradient-to-br ${metallicGrad} ${rank === 1 ? 'text-yellow-900' : 'text-gray-800'}`}>
                 {rank}
              </div>
         </div>
 
-        {/* Team Name */}
-        <div className="mb-2 text-center">
-            <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold text-white shadow-sm ${team.tailwindBg}`}>
-                {team.name.split(' ')[0]}
-            </span>
-        </div>
-
-        {/* Podium Box */}
-        <div className={`w-full ${heightClass} ${bgClass} rounded-t-3xl ${shadowClass} border-t-2 ${borderClass} flex flex-col items-center justify-start pt-4 relative overflow-hidden`}>
-            {/* Texture */}
+        {/* Podium Block */}
+        <div className={`w-full ${heightClass} ${bgClass} rounded-t-[3rem] ${shadowClass} border-t-4 ${borderClass} flex flex-col items-center justify-start pt-8 relative overflow-hidden group`}>
             <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/white-diamond.png')]"></div>
+            <div className="absolute top-0 left-1/4 w-1/2 h-full bg-white/10 skew-x-12 -translate-x-full group-hover:animate-[shimmer_3s_infinite] pointer-events-none"></div>
             
-            {/* Total Medals Count */}
-            <div className="relative z-10 flex flex-col items-center">
-                <span className={`text-4xl md:text-5xl font-black ${iconColor} drop-shadow-sm opacity-80`}>
-                    {total}
+            <div className="relative z-20 flex flex-col items-center">
+                <span className={`text-5xl md:text-7xl font-black ${iconColor} drop-shadow-md tracking-tighter`}>
+                    {points}
                 </span>
-                <span className={`text-[10px] uppercase tracking-wider font-bold ${iconColor} opacity-60`}>
-                    Medals
+                <span className={`text-[10px] md:text-[12px] uppercase tracking-[0.3em] font-black ${iconColor} opacity-70 mt-1`}>
+                    Total Points
                 </span>
-            </div>
 
-            {/* Medal Detail Icons (Tiny) */}
-            <div className="mt-auto mb-4 flex gap-1 opacity-50">
-                <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-                <div className="w-2 h-2 rounded-full bg-slate-500"></div>
-                <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                {/* Breakdown Display */}
+                <div className="mt-4 flex gap-4 bg-black/5 px-4 py-2 rounded-2xl border border-black/5">
+                    <div className="flex items-center gap-1.5">
+                        <Activity size={12} className={iconColor} />
+                        <span className={`text-xs font-black ${iconColor}`}>{sportsPoints}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 border-l border-black/10 pl-4">
+                        <Timer size={12} className={iconColor} />
+                        <span className={`text-xs font-black ${iconColor}`}>{athleticsPoints}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div className="mt-auto mb-8 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/30">
+                <div className="flex gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,1)]"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-slate-100 shadow-[0_0_8px_rgba(255,255,255,1)]"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,1)]"></div>
+                </div>
             </div>
         </div>
       </div>
@@ -117,11 +125,10 @@ const OverallPodium: React.FC<OverallPodiumProps> = ({ standings }) => {
   };
 
   return (
-    <div className="relative pt-8 pb-4">
-        {/* Background Decorative Elements */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-sm h-64 bg-gradient-to-b from-blue-100/50 to-transparent rounded-full blur-3xl -z-10"></div>
+    <div className="relative pt-16 pb-8 animate-fade-in">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl h-[400px] bg-blue-100/30 rounded-full blur-[120px] -z-10"></div>
         
-        <div className="flex items-end justify-center gap-2 md:gap-6 px-2 max-w-2xl mx-auto">
+        <div className="flex items-end justify-center gap-2 md:gap-8 px-2 max-w-4xl mx-auto min-h-[450px]">
             <PodiumStand standing={rank2} rank={2} />
             <PodiumStand standing={rank1} rank={1} />
             <PodiumStand standing={rank3} rank={3} />

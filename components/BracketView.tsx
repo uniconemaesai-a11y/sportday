@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { SportTournament, Match } from '../types';
 import { TEAMS, toThaiNumber, getIcon } from '../constants';
@@ -113,7 +114,7 @@ const BracketView: React.FC<BracketViewProps> = ({ tournament, onUpdateMatch }) 
                 className="flex items-center justify-center gap-2 bg-white text-gray-700 border-2 border-gray-100 px-6 py-2.5 rounded-2xl shadow-sm hover:bg-gray-50 hover:shadow-md transition-all active:scale-95 font-black text-[11px]"
             >
                 <Printer size={18} className="text-blue-500" />
-                <span>สั่งพิมพ์</span>
+                <span>พิมพ์ตารางสายแข่ง</span>
             </button>
             <button 
                 onClick={handleDownloadPdf}

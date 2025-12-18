@@ -1,131 +1,125 @@
+
 /**
- * ระบบหลังบ้านกีฬาสีโรงเรียนเทศบาล ๑ วัดพรหมวิหาร ๒๕๖๘
- * -----------------------------------------------------------
- * วิธีการติดตั้ง:
- * 1. ไปที่ https://script.google.com/
- * 2. สร้างโครงการใหม่
- * 3. นำโค้ดนี้ไปวางทับในไฟล์ Code.gs ทั้งหมด
- * 4. เปลี่ยน SPREADSHEET_ID ด้านล่างให้เป็น ID ของ Google Sheet ของคุณ
- * 5. กด Save (รูปแผ่นดิสก์)
- * 6. กด Deploy > New deployment
- * 7. เลือกประเภทเป็น "Web app"
- * 8. Execute as: "Me" (ตัวคุณเอง)
- * 9. Who has access: "Anyone" (ทุกคน)
- * 10. กด Deploy และคัดลอก "Web app URL" ไปใส่ใน tournamentService.ts
+ * ระบบหลังบ้านกีฬาสีโรงเรียนเทศบาล ๑ วัดพรหมวิหาร ๒๕๖๘ (Senior Pro Version)
+ * -----------------------------------------------------------------------
+ * วัตถุประสงค์: จัดการฐานข้อมูลการแข่งขันกีฬาและกรีฑาแบบ Real-time
+ * ฟีเจอร์: 
+ * - รองรับการอัปเดตแบบจุดเดียว และแบบกลุ่ม (Batch Update)
+ * - ระบบป้องกันข้อมูลซ้ำด้วย LockService
+ * - รองรับคำสั่ง Reset ข้อมูลจากหน้าเว็บ
  */
 
-const SPREADSHEET_ID = '10q_mRMZxybLkDcVcnFygLHh3BZIkR9mQtQ7RLUOC1jo'; 
+const SPREADSHEET_ID = '10q_mRMZxybLkDcVcnFygLHh3BZIkR9mQtQ7RLUOC1jo';
 const SHEET_NAME = 'Matches';
+const HEADERS = ['id', 'sportId', 'round', 'teamAId', 'teamBId', 'scoreA', 'scoreB', 'status', 'winnerId', 'updatedAt'];
 
+/**
+ * อ่านข้อมูลทั้งหมด (GET)
+ */
 function doGet(e) {
-  return handleRequest(e);
-}
-
-function doPost(e) {
-  return handleRequest(e);
-}
-
-function handleRequest(e) {
-  // Lock ระบบเพื่อป้องกันข้อมูลเขียนทับกันในเสี้ยววินาทีเดียวกัน
-  const lock = LockService.getScriptLock();
-  if (!lock.tryLock(30000)) {
-     return createJSONOutput({ status: 'error', message: 'เซิร์ฟเวอร์ไม่ว่าง กรุณาลองใหม่ในภายหลัง' });
-  }
-
   try {
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-    let sheet = ss.getSheetByName(SHEET_NAME);
-    
-    // โครงสร้างหัวตารางที่แอปพลิเคชันต้องการ
-    const HEADERS = ['id', 'sportId', 'round', 'teamAId', 'teamBId', 'scoreA', 'scoreB', 'status', 'winnerId', 'updatedAt'];
-
-    // สร้าง Sheet และหัวตารางหากยังไม่มี
-    if (!sheet) {
-      sheet = ss.insertSheet(SHEET_NAME);
-      sheet.appendRow(HEADERS);
-    }
-    if (sheet.getLastRow() === 0) {
-       sheet.appendRow(HEADERS);
-    }
-
-    // --- GET Request: อ่านข้อมูลทั้งหมด ---
-    if (!e.postData) {
-      const data = sheet.getDataRange().getValues();
-      if (data.length <= 1) {
-        return createJSONOutput({ status: 'success', data: [] });
-      }
-
-      const sheetHeaders = data[0];
-      const rows = data.slice(1);
-      
-      const result = rows.map(row => {
-        let obj = {};
-        sheetHeaders.forEach((h, i) => obj[h] = row[i]);
-        return obj;
-      });
-
-      return createJSONOutput({ status: 'success', data: result });
-    }
-
-    // --- POST Request: บันทึกหรืออัปเดตข้อมูล (Upsert) ---
-    const payload = JSON.parse(e.postData.contents);
-    const itemsToUpdate = Array.isArray(payload) ? payload : [payload];
-    
+    const sheet = getOrCreateSheet(ss);
     const data = sheet.getDataRange().getValues();
-    const sheetHeaders = data[0];
     
-    // สร้าง Mapping สำหรับอ้างอิงคอลัมน์จากหัวตาราง
-    const colMap = {};
-    sheetHeaders.forEach((h, i) => colMap[h] = i);
+    if (data.length <= 1) return createJSONOutput({ status: 'success', data: [] });
+
+    const headers = data[0];
+    const rows = data.slice(1);
     
-    if (colMap['id'] === undefined) {
-      throw new Error("ไม่พบคอลัมน์ 'id' ในตาราง");
+    const result = rows.map(row => {
+      let obj = {};
+      headers.forEach((h, i) => {
+        let val = row[i];
+        if (val === 'undefined' || val === '') val = undefined;
+        obj[h] = val;
+      });
+      return obj;
+    });
+
+    return createJSONOutput({ status: 'success', data: result });
+  } catch (err) {
+    return createJSONOutput({ status: 'error', message: err.toString() });
+  }
+}
+
+/**
+ * บันทึกข้อมูล (POST)
+ */
+function doPost(e) {
+  const lock = LockService.getScriptLock();
+  try {
+    // รอคิวสูงสุด 30 วินาที
+    if (!lock.tryLock(30000)) {
+      return createJSONOutput({ status: 'error', message: 'Server is busy. Please try again.' });
     }
 
-    // สร้าง Mapping สำหรับหาแถวที่ต้องการอัปเดตตาม ID
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = getOrCreateSheet(ss);
+    const contents = JSON.parse(e.postData.contents);
+    const items = Array.isArray(contents) ? contents : [contents];
+    
+    // ดึงข้อมูลเดิมมาทำ Mapping เพื่อความรวดเร็ว
+    const fullData = sheet.getDataRange().getValues();
     const idToRowMap = {};
-    for (let i = 1; i < data.length; i++) {
-      const id = data[i][colMap['id']];
+    for (let i = 1; i < fullData.length; i++) {
+      const id = fullData[i][0]; // คอลัมน์ id อยู่ที่ 0
       if (id) idToRowMap[id] = i + 1;
     }
 
-    itemsToUpdate.forEach(item => {
-      const rowNum = idToRowMap[item.id];
-      const existingRow = rowNum ? data[rowNum - 1] : null;
+    const now = Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd HH:mm:ss");
 
-      // จัดเตรียมข้อมูลแถวใหม่ (Partial Update)
-      const newRowData = sheetHeaders.map((h, i) => {
-          if (h === 'updatedAt') return new Date().toLocaleString('th-TH');
-          
-          const newVal = item[h];
-          if (newVal !== undefined) {
-            return newVal === 'undefined' ? '' : newVal;
-          } else if (existingRow) {
-            return existingRow[i];
-          } else {
-            return '';
-          }
+    // กรณีพิเศษ: ถ้าเป็นการ Reset (ส่งมาเยอะและข้อมูลว่าง) ให้พิจารณาล้าง Sheet เพื่อความสะอาด
+    const isResetOperation = items.length > 50; 
+    if (isResetOperation) {
+      sheet.clear();
+      sheet.appendRow(HEADERS);
+      sheet.setFrozenRows(1);
+      // เมื่อล้างแล้วต้อง Reset map ด้วย
+      Object.keys(idToRowMap).forEach(key => delete idToRowMap[key]);
+    }
+
+    items.forEach(item => {
+      const rowNum = idToRowMap[item.id];
+      const rowData = HEADERS.map(h => {
+        if (h === 'updatedAt') return now;
+        let val = item[h];
+        return (val === undefined || val === null || val === 'undefined') ? '' : val;
       });
 
-      if (rowNum) {
-        // อัปเดตแถวเดิม
-        sheet.getRange(rowNum, 1, 1, newRowData.length).setValues([newRowData]);
+      if (rowNum && !isResetOperation) {
+        sheet.getRange(rowNum, 1, 1, HEADERS.length).setValues([rowData]);
       } else {
-        // เพิ่มแถวใหม่
-        sheet.appendRow(newRowData);
+        sheet.appendRow(rowData);
       }
     });
 
-    return createJSONOutput({ status: 'success', updatedCount: itemsToUpdate.length });
+    return createJSONOutput({ status: 'success', count: items.length });
 
   } catch (err) {
+    console.error(err);
     return createJSONOutput({ status: 'error', message: err.toString() });
   } finally {
-    // ปลดล็อกระบบ
     lock.releaseLock();
   }
 }
 
+/**
+ * ช่วยจัดการเรื่องการหาหรือสร้าง Sheet
+ */
+function getOrCreateSheet(ss) {
+  let sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+    sheet.appendRow(HEADERS);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/**
+ * Helper: สร้าง JSON Output
+ */
 function createJSONOutput(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);

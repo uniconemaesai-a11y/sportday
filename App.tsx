@@ -1,14 +1,16 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { SPORTS_LIST, getIcon, toThaiNumber, TEAMS } from './constants';
 import { SportTournament, Match, SportConfig } from './types';
 import { initializeTournament, updateTournamentMatch, saveToLocal, loadFromLocal, fetchFromSheets, mergeSheetData, saveToCloud } from './services/tournamentService';
 import BracketView from './components/BracketView';
+import AthleticsResultView from './components/AthleticsResultView';
 import MedalTable from './components/MedalTable';
 import BroadcastCard from './components/BroadcastCard';
 import MatchResultCard from './components/MatchResultCard';
 import OverallPodium from './components/OverallPodium';
 import AllMatchesPrintView from './components/AllMatchesPrintView';
-import { Home, Trophy, Medal, ChevronLeft, RefreshCw, Database, Check, ListFilter, Printer, FileText, X, ChevronRight, Heart, Sparkles, Activity, Star, Zap, Loader2, Search, Filter, Layers, Target, Dumbbell, Users, User, LayoutGrid, Trash2, AlertTriangle, TrendingUp, Award, ListChecks, TableProperties } from 'lucide-react';
+import { Home, Trophy, Medal, ChevronLeft, RefreshCw, Database, Check, ListFilter, Printer, FileText, X, ChevronRight, Heart, Sparkles, Activity, Star, Zap, Loader2, Search, Filter, Layers, Target, Dumbbell, Users, User, LayoutGrid, Trash2, AlertTriangle, TrendingUp, Award, ListChecks, TableProperties, Timer, ShieldAlert, Key } from 'lucide-react';
 
 const App = () => {
   const [activeTab, setActiveTab] = useState<'home' | 'sports' | 'ranking'>('home');
@@ -18,6 +20,8 @@ const App = () => {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [resetPasscode, setResetPasscode] = useState('');
+  const [resetError, setResetError] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [tournaments, setTournaments] = useState<Record<string, SportTournament>>({});
 
@@ -80,6 +84,34 @@ const App = () => {
     }
   };
 
+  const handleAthleticsUpdate = (championId?: string, runnerUpId?: string, secondRunnerUpId?: string) => {
+    if (!selectedSportId) return;
+    const current = tournaments[selectedSportId];
+    if (!current) return;
+
+    const updated: SportTournament = {
+      ...current,
+      championId,
+      runnerUpId,
+      secondRunnerUpId
+    };
+
+    const newTournaments = { ...tournaments, [selectedSportId]: updated };
+    setTournaments(newTournaments);
+    saveToLocal(newTournaments);
+    
+    const directMatch: Match = {
+      id: `m_${selectedSportId}_direct`,
+      sportId: selectedSportId,
+      round: 'direct',
+      scoreA: 0,
+      scoreB: 0,
+      status: 'finished',
+      winnerId: championId 
+    };
+    saveToCloud([directMatch]);
+  };
+
   const handleManualSync = async () => {
       setIsSyncing(true);
       setSyncStatus('idle');
@@ -106,6 +138,12 @@ const App = () => {
   };
 
   const handleResetAllData = async () => {
+      if (resetPasscode !== '1722') {
+          setResetError(true);
+          setTimeout(() => setResetError(false), 2000);
+          return;
+      }
+
       setIsSyncing(true);
       const initialData: Record<string, SportTournament> = {};
       SPORTS_LIST.forEach(sport => {
@@ -120,45 +158,9 @@ const App = () => {
       
       setIsSyncing(false);
       setShowResetModal(false);
+      setResetPasscode('');
       setActiveTab('home');
       setSelectedSportId(null);
-  };
-
-  const handlePrintMasterReport = () => {
-      setIsPrinting(true);
-      const element = document.getElementById('master-print-container');
-      if (element && (window as any).html2pdf) {
-          const originalStyle = element.getAttribute('style') || '';
-          element.style.display = 'block';
-          element.style.position = 'fixed';
-          element.style.top = '0';
-          element.style.left = '0';
-          element.style.zIndex = '9999';
-          element.style.backgroundColor = 'white';
-          element.style.width = '1123px';
-
-          const opt = {
-            margin: 10,
-            filename: `สรุปผลการแข่งขันรวม_กีฬาสีสัมพันธ์_๒๕๖๘.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, letterRendering: true, backgroundColor: '#ffffff', logging: false },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-          };
-
-          setTimeout(() => {
-              (window as any).html2pdf().set(opt).from(element).save().then(() => {
-                  element.setAttribute('style', originalStyle);
-                  setIsPrinting(false);
-                  setShowPrintModal(false);
-              }).catch((err: any) => {
-                  console.error(err);
-                  element.setAttribute('style', originalStyle);
-                  setIsPrinting(false);
-                  alert("เกิดข้อผิดพลาดในการสร้าง PDF");
-              });
-          }, 1500);
-      }
   };
 
   const handleDirectPrintAllResults = () => {
@@ -166,31 +168,62 @@ const App = () => {
   };
 
   const standingsData = useMemo(() => {
-    const stats: Record<string, { team: typeof TEAMS[0], gold: number, silver: number, bronze: number, points: number, total: number }> = {};
+    const stats: Record<string, { 
+      team: typeof TEAMS[0], 
+      gold: number, 
+      silver: number, 
+      bronze: number, 
+      points: number, 
+      sportsPoints: number,
+      athleticsPoints: number,
+      total: number 
+    }> = {};
+    
     TEAMS.forEach(team => {
-        stats[team.id] = { team, gold: 0, silver: 0, bronze: 0, points: 0, total: 0 };
+        stats[team.id] = { team, gold: 0, silver: 0, bronze: 0, points: 0, sportsPoints: 0, athleticsPoints: 0, total: 0 };
     });
 
     (Object.values(tournaments) as SportTournament[]).forEach(t => {
+        const isAthletics = t.sportConfig.type === 'athletics';
+        
+        const updatePoints = (teamId: string, pts: number) => {
+            if (!stats[teamId]) return;
+            if (isAthletics) stats[teamId].athleticsPoints += pts;
+            else stats[teamId].sportsPoints += pts;
+            stats[teamId].points += pts;
+        };
+
         if (t.championId && stats[t.championId]) { 
             stats[t.championId].gold++; 
-            stats[t.championId].points += 3;
+            updatePoints(t.championId, 3);
             stats[t.championId].total++;
         }
         if (t.runnerUpId && stats[t.runnerUpId]) { 
             stats[t.runnerUpId].silver++; 
-            stats[t.runnerUpId].points += 2;
+            updatePoints(t.runnerUpId, 2);
             stats[t.runnerUpId].total++;
         }
         if (t.secondRunnerUpId && stats[t.secondRunnerUpId]) { 
             stats[t.secondRunnerUpId].bronze++; 
-            stats[t.secondRunnerUpId].points += 1;
+            updatePoints(t.secondRunnerUpId, 1);
             stats[t.secondRunnerUpId].total++;
         }
     });
 
-    return Object.values(stats).sort((a, b) => b.points - a.points || b.gold - a.gold);
+    return Object.values(stats);
   }, [tournaments]);
+
+  const overallStandings = useMemo(() => {
+    return [...standingsData].sort((a, b) => b.points - a.points || b.gold - a.gold);
+  }, [standingsData]);
+
+  const sportsStandings = useMemo(() => {
+    return [...standingsData].sort((a, b) => b.sportsPoints - a.sportsPoints || b.gold - a.gold);
+  }, [standingsData]);
+
+  const athleticsStandings = useMemo(() => {
+    return [...standingsData].sort((a, b) => b.athleticsPoints - a.athleticsPoints || b.gold - a.gold);
+  }, [standingsData]);
 
   const finishedSportsBreakdown = useMemo(() => {
     return (Object.values(tournaments) as SportTournament[])
@@ -203,7 +236,8 @@ const App = () => {
         const matchesSearch = sport.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                              sport.category.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesCategory = selectedCategory === 'ทั้งหมด' || 
-                                (selectedCategory === 'ลูกบอล' && (sport.type === 'football' || sport.type === 'futsal' || sport.type === 'volleyball' || sport.type === 'handball' || sport.type === 'chairball')) ||
+                                (selectedCategory === 'ลูกบอล' && (sport.type !== 'athletics' && sport.type !== 'chess' && sport.type !== 'checkers' && sport.type !== 'petanque' && sport.type !== 'badminton' && sport.type !== 'tugofwar')) ||
+                                (selectedCategory === 'กรีฑา' && sport.type === 'athletics') ||
                                 (selectedCategory === 'ทีม' && (sport.iconName === 'Users' || sport.type === 'tugofwar')) ||
                                 (selectedCategory === 'บุคคล' && (sport.iconName === 'User' || sport.iconName === 'Dna' || sport.iconName === 'Square' || sport.iconName === 'Hexagon'));
         return matchesSearch && matchesCategory;
@@ -243,7 +277,7 @@ const App = () => {
             </div>
         </header>
 
-        <div className="max-w-5xl mx-auto px-6 no-print">
+        <div className="max-w-6xl mx-auto px-6 no-print">
             <div className="-mt-12 relative z-20">
                 <div className="glass-card rounded-[3rem] p-5 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.15)] flex flex-wrap items-center justify-between gap-4 border-2 border-white">
                     <div className="flex items-center gap-4 pl-4">
@@ -259,25 +293,8 @@ const App = () => {
                             className="flex items-center gap-2 text-[11px] font-black px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all active:scale-95"
                         >
                             <Printer size={16} />
-                            <span>พิมพ์ผลทุกกีฬา</span>
+                            <span>พิมพ์ตารางสายแข่งรวม</span>
                         </button>
-
-                        <button 
-                            onClick={handleDirectPrintAllResults}
-                            className="flex items-center gap-2 text-[11px] font-black px-5 py-3 rounded-2xl bg-indigo-500 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all active:scale-95"
-                        >
-                            <TableProperties size={16} />
-                            <span>พิมพ์ตารางสายแข่ง</span>
-                        </button>
-                        
-                        <button 
-                            onClick={() => setShowPrintModal(true)} 
-                            className="flex items-center gap-2 text-[11px] font-black px-5 py-3 rounded-2xl bg-white text-indigo-600 border-2 border-indigo-50 shadow-sm hover:shadow-md hover:bg-indigo-50/50 transition-all active:scale-95"
-                        >
-                            <FileText size={16} />
-                            <span>ออกรายงาน PDF</span>
-                        </button>
-                        
                         <button 
                             onClick={handleManualSync} 
                             disabled={isSyncing} 
@@ -286,10 +303,9 @@ const App = () => {
                             {isSyncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                             <span>{isSyncing ? 'ซิงค์...' : 'อัปเดต'}</span>
                         </button>
-
                         <button 
-                            onClick={() => setShowResetModal(true)}
-                            className="flex items-center gap-2 text-[11px] font-black px-5 py-3 rounded-2xl bg-rose-50 text-rose-600 border-2 border-rose-100 hover:bg-rose-100 transition-all active:scale-95"
+                            onClick={() => setShowResetModal(true)} 
+                            className="flex items-center gap-2 text-[11px] font-black px-5 py-3 rounded-2xl bg-rose-50 text-rose-600 border-2 border-rose-100 shadow-sm hover:bg-rose-100 transition-all active:scale-95"
                         >
                             <Trash2 size={16} />
                             <span>ล้างข้อมูล</span>
@@ -304,129 +320,75 @@ const App = () => {
                         <div className="bg-yellow-100 p-3 rounded-2xl text-yellow-600 shadow-sm"><Trophy size={28} /></div>
                         <div>
                             <h3 className="text-3xl font-black text-gray-800 tracking-tighter italic leading-none">ตารางคะแนนรวม</h3>
-                            <p className="text-gray-400 font-black text-[10px] uppercase tracking-[0.3em] mt-1">ทอง 3 • เงิน 2 • ทองแดง 1</p>
+                            <p className="text-gray-400 font-black text-[10px] uppercase tracking-[0.3em] mt-1">ทอง ๓ • เงิน ๒ • ทองแดง ๑</p>
                         </div>
                     </div>
-                    <div className="hidden md:flex items-center gap-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-full text-[10px] font-black">
+                    <div className="flex items-center gap-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-full text-[10px] font-black border border-blue-100">
                         <TrendingUp size={16} /> LIVE RANKING
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {standingsData.map((row, idx) => (
-                        <div key={row.team.id} className={`group relative overflow-hidden p-8 rounded-[3rem] shadow-xl border-4 transition-all duration-500 hover:-translate-y-2 bg-white ${row.team.tailwindBorder} border-opacity-20`}>
-                            <div className={`absolute -top-4 -right-4 w-16 h-16 rounded-full flex items-center justify-center text-white font-black text-xl shadow-lg transform rotate-12 group-hover:rotate-0 transition-transform ${idx === 0 ? 'bg-yellow-400' : idx === 1 ? 'bg-slate-300' : idx === 2 ? 'bg-orange-400' : 'bg-gray-100 text-gray-400'}`}>
-                                {idx + 1}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {overallStandings.map((row, idx) => {
+                        const rankGradients = [
+                            'from-yellow-400 via-yellow-300 to-yellow-500 shadow-yellow-200/50',
+                            'from-slate-300 via-slate-100 to-slate-400 shadow-slate-200/50',
+                            'from-orange-400 via-orange-300 to-orange-500 shadow-orange-200/50',
+                            'from-gray-100 via-gray-50 to-gray-200 shadow-gray-100'
+                        ];
+                        
+                        return (
+                            <div key={row.team.id} className={`group relative bg-white/80 backdrop-blur-xl rounded-[3.5rem] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.05)] border-2 transition-all duration-500 hover:-translate-y-4 hover:shadow-[0_40px_80px_rgba(0,0,0,0.1)] ${row.team.tailwindBorder} border-opacity-30`}>
+                                <div className={`absolute -top-4 -right-4 w-16 h-16 rounded-full flex items-center justify-center text-white font-black text-2xl shadow-xl transform rotate-12 group-hover:rotate-0 transition-all duration-500 bg-gradient-to-br border-4 border-white ${idx < 4 ? rankGradients[idx] : rankGradients[3]}`}>
+                                    {idx + 1}
+                                </div>
+                                <div className="flex flex-col items-center">
+                                    <div className="relative mb-6">
+                                        <div className={`absolute -inset-4 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity ${row.team.tailwindBg}`}></div>
+                                        <div className={`relative w-24 h-24 rounded-full flex items-center justify-center text-white font-black text-sm shadow-2xl ${row.team.tailwindBg} ring-[12px] ring-white transform group-hover:scale-110 transition-transform duration-700 px-2 text-center leading-tight`}>
+                                            {row.team.name.split(' ')[0]}
+                                        </div>
+                                    </div>
+                                    <h4 className="text-3xl font-black text-gray-900 mb-1 leading-none drop-shadow-sm">{row.team.name.split(' ')[0]}</h4>
+                                    <div className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-8 italic">{row.team.name.split('(')[1]?.replace(')', '') || 'โรงเรียนเทศบาล ๑'}</div>
+                                    <div className="w-full bg-gray-50/80 rounded-[2.5rem] p-6 flex flex-col items-center border border-gray-100 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)] group-hover:bg-white group-hover:shadow-lg transition-all">
+                                        <span className="text-5xl font-black text-indigo-600 drop-shadow-sm tracking-tighter">{row.points}</span>
+                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mt-2">คะแนนรวม</span>
+                                    </div>
+                                    <div className="mt-8 flex gap-4">
+                                        <div className="flex flex-col items-center group/medal">
+                                            <div className="w-10 h-10 rounded-2xl bg-yellow-400 text-white flex items-center justify-center shadow-lg mb-2 group-hover/medal:-translate-y-1 transition-transform">
+                                                <Trophy size={18} fill="currentColor" />
+                                            </div>
+                                            <span className="text-sm font-black text-gray-700">{row.gold}</span>
+                                        </div>
+                                        <div className="flex flex-col items-center group/medal">
+                                            <div className="w-10 h-10 rounded-2xl bg-slate-300 text-white flex items-center justify-center shadow-lg mb-2 group-hover/medal:-translate-y-1 transition-transform">
+                                                <Medal size={18} fill="currentColor" />
+                                            </div>
+                                            <span className="text-sm font-black text-gray-700">{row.silver}</span>
+                                        </div>
+                                        <div className="flex flex-col items-center group/medal">
+                                            <div className="w-10 h-10 rounded-2xl bg-orange-400 text-white flex items-center justify-center shadow-lg mb-2 group-hover/medal:-translate-y-1 transition-transform">
+                                                <Medal size={18} fill="currentColor" />
+                                            </div>
+                                            <span className="text-sm font-black text-gray-700">{row.bronze}</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            <div className="flex flex-col items-center">
-                                <div className={`w-20 h-20 rounded-[2rem] flex items-center justify-center text-white font-black text-xs md:text-sm shadow-2xl mb-4 ${row.team.tailwindBg} ring-8 ring-white transform group-hover:scale-110 transition-transform px-1 text-center leading-tight`}>
-                                    {row.team.name.split(' ')[0]}
-                                </div>
-                                <h4 className="text-2xl font-black text-gray-800 mb-1 leading-none">{row.team.name.split(' ')[0]}</h4>
-                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6 italic">{row.team.name.split('(')[1]?.replace(')', '') || 'โรงเรียนเทศบาล ๑'}</div>
-                                
-                                <div className="w-full bg-gray-50 rounded-2xl p-4 flex flex-col items-center border border-gray-100 shadow-inner">
-                                    <span className="text-4xl font-black text-indigo-600 drop-shadow-sm">{row.points}</span>
-                                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-1">คะแนนรวม</span>
-                                </div>
-
-                                <div className="mt-6 flex gap-3">
-                                    <div className="flex flex-col items-center">
-                                        <div className="w-8 h-8 rounded-lg bg-yellow-400 text-white flex items-center justify-center shadow-md mb-1"><Medal size={14} fill="currentColor" /></div>
-                                        <span className="text-xs font-black">{row.gold}</span>
-                                    </div>
-                                    <div className="flex flex-col items-center">
-                                        <div className="w-8 h-8 rounded-lg bg-slate-300 text-white flex items-center justify-center shadow-md mb-1"><Medal size={14} fill="currentColor" /></div>
-                                        <span className="text-xs font-black">{row.silver}</span>
-                                    </div>
-                                    <div className="flex flex-col items-center">
-                                        <div className="w-8 h-8 rounded-lg bg-orange-400 text-white flex items-center justify-center shadow-md mb-1"><Medal size={14} fill="currentColor" /></div>
-                                        <span className="text-xs font-black">{row.bronze}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
-
-            {finishedSportsBreakdown.length > 0 && (
-                <div className="mt-20">
-                    <div className="flex items-center gap-4 mb-10">
-                        <div className="bg-indigo-100 p-3 rounded-2xl text-indigo-600 shadow-sm"><ListChecks size={28} /></div>
-                        <div>
-                            <h3 className="text-3xl font-black text-gray-800 tracking-tighter italic leading-none">สรุปคะแนนแต่ละชนิดกีฬา</h3>
-                            <p className="text-gray-400 font-black text-[10px] uppercase tracking-[0.3em] mt-1">Finished Sports breakdown</p>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {finishedSportsBreakdown.map((t, idx) => {
-                            const gold = TEAMS.find(team => team.id === t.championId);
-                            const silver = TEAMS.find(team => team.id === t.runnerUpId);
-                            const bronze = TEAMS.find(team => team.id === t.secondRunnerUpId);
-
-                            return (
-                                <div key={t.sportConfig.id} className="bg-white rounded-[2.5rem] p-6 shadow-xl border-4 border-gray-50 hover:border-indigo-100 transition-all group overflow-hidden relative">
-                                    <div className="absolute -right-4 -top-4 opacity-[0.03] group-hover:scale-125 transition-transform">
-                                        {getIcon(t.sportConfig.iconName, 120)}
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-4 mb-6">
-                                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-                                            {getIcon(t.sportConfig.iconName, 24)}
-                                        </div>
-                                        <div>
-                                            <h4 className="font-black text-gray-800 leading-tight group-hover:text-indigo-600 transition-colors">{t.sportConfig.name}</h4>
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-0.5">{t.sportConfig.category}</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        {gold && (
-                                            <div className="flex items-center justify-between bg-yellow-50/50 p-3 rounded-2xl border border-yellow-100">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-black text-[8px] ${gold.tailwindBg}`}>๑</div>
-                                                    <span className="text-xs font-black text-gray-700">{gold.name.split(' ')[0]}</span>
-                                                </div>
-                                                <span className="bg-yellow-400 text-white text-[10px] font-black px-3 py-1 rounded-full">+๓ คะแนน</span>
-                                            </div>
-                                        )}
-                                        {silver && (
-                                            <div className="flex items-center justify-between bg-slate-50/50 p-3 rounded-2xl border border-slate-100">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-black text-[8px] ${silver.tailwindBg}`}>๒</div>
-                                                    <span className="text-xs font-black text-gray-700">{silver.name.split(' ')[0]}</span>
-                                                </div>
-                                                <span className="bg-slate-400 text-white text-[10px] font-black px-3 py-1 rounded-full">+๒ คะแนน</span>
-                                            </div>
-                                        )}
-                                        {bronze && (
-                                            <div className="flex items-center justify-between bg-orange-50/50 p-3 rounded-2xl border border-orange-100">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-black text-[8px] ${bronze.tailwindBg}`}>๓</div>
-                                                    <span className="text-xs font-black text-gray-700">{bronze.name.split(' ')[0]}</span>
-                                                </div>
-                                                <span className="bg-orange-400 text-white text-[10px] font-black px-3 py-1 rounded-full">+๑ คะแนน</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
 
             <div className="mt-20 group">
                 <div className="relative bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 rounded-[4rem] p-1.5 shadow-[0_35px_80px_-15px_rgba(30,58,138,0.4)] overflow-hidden">
                     <div className="bg-white/5 backdrop-blur-md rounded-[3.8rem] p-10 md:p-14 text-white relative flex flex-col md:flex-row items-center justify-between gap-10">
                         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500 rounded-full blur-[120px] opacity-30"></div>
-                        
                         <div className="text-center md:text-left relative z-10">
                             <h3 className="text-4xl md:text-6xl font-black mb-4 tracking-tighter text-blue-400 italic">Arena Entrance</h3>
-                            <p className="text-blue-100/70 font-bold text-lg md:text-xl max-w-sm">เข้าสู่สนามแข่งขัน เพื่อบันทึกผลการแข่งขันและตรวจสอบตารางสายกีฬา</p>
+                            <p className="text-blue-100/70 font-bold text-lg md:text-xl max-w-sm">เข้าสู่สนามกีฬา เพื่อบันทึกคะแนนและดูตารางการแข่งขัน</p>
                         </div>
                         <button 
                             onClick={() => setActiveTab('sports')} 
@@ -440,6 +402,57 @@ const App = () => {
                 </div>
             </div>
         </div>
+
+        {showResetModal && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-gray-900/60 backdrop-blur-xl animate-fade-in">
+                <div className="bg-white rounded-[3rem] shadow-2xl max-w-md w-full p-10 border-4 border-white relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-2 bg-rose-500"></div>
+                    <div className="flex flex-col items-center text-center">
+                        <div className="bg-rose-100 text-rose-600 p-5 rounded-[2rem] mb-6">
+                            <ShieldAlert size={48} />
+                        </div>
+                        <h3 className="text-3xl font-black text-gray-900 mb-2 leading-none italic">ล้างข้อมูลทั้งหมด?</h3>
+                        <p className="text-gray-400 font-bold text-sm mb-8">การดำเนินการนี้จะลบผลการแข่งขันและสรุปเหรียญทั้งหมด ไม่สามารถกู้คืนได้</p>
+                        <div className={`w-full relative mb-8 ${resetError ? 'animate-shake' : ''}`}>
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                                <Key size={20} />
+                            </div>
+                            <input 
+                                type="password" 
+                                value={resetPasscode}
+                                onChange={(e) => {
+                                    setResetPasscode(e.target.value);
+                                    setResetError(false);
+                                }}
+                                placeholder="ระบุรหัสผ่านเพื่อยืนยัน"
+                                className={`w-full pl-12 pr-4 py-4 bg-gray-50 border-2 rounded-2xl font-black focus:outline-none transition-all ${resetError ? 'border-rose-300 bg-rose-50' : 'border-gray-100 focus:border-blue-500'}`}
+                            />
+                            {resetError && (
+                                <p className="text-rose-500 text-[10px] font-black mt-2 flex items-center justify-center gap-1">
+                                    <AlertTriangle size={12} /> รหัสผ่านไม่ถูกต้อง
+                                </p>
+                            )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 w-full">
+                            <button 
+                                onClick={() => { setShowResetModal(false); setResetPasscode(''); }}
+                                className="py-4 rounded-2xl font-black text-gray-400 bg-gray-50 hover:bg-gray-100 transition-all active:scale-95"
+                            >
+                                ยกเลิก
+                            </button>
+                            <button 
+                                onClick={handleResetAllData}
+                                className="py-4 rounded-2xl font-black text-white bg-rose-500 hover:bg-rose-600 shadow-xl shadow-rose-100 transition-all active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                <Trash2 size={18} />
+                                <span>ยืนยันการล้าง</span>
+                            </button>
+                        </div>
+                        <p className="mt-6 text-[10px] font-black text-gray-300 uppercase tracking-widest italic">Passcode: 1 7 2 2</p>
+                    </div>
+                </div>
+            </div>
+        )}
     </div>
   );
 
@@ -462,12 +475,11 @@ const App = () => {
                         </div>
                     </div>
                 </div>
-                
                 <div className="relative flex-grow max-sm:hidden max-w-sm">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-300"><Search size={18} strokeWidth={3} /></div>
                     <input 
                         type="text" 
-                        placeholder="ค้นหา..." 
+                        placeholder="ค้นหากีฬา..." 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-11 pr-5 py-3.5 bg-gray-50/50 border-2 border-gray-100 rounded-2xl text-base font-black text-gray-800 placeholder:text-gray-300 focus:outline-none focus:border-indigo-100 focus:ring-8 focus:ring-indigo-50/50 transition-all"
@@ -475,12 +487,12 @@ const App = () => {
                 </div>
             </div>
         </div>
-
         <div className="max-w-6xl mx-auto px-6 mt-8">
             <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
                 {[
                     { id: 'ทั้งหมด', label: 'ทั้งหมด', icon: <LayoutGrid size={16} />, bg: 'bg-slate-50', text: 'text-slate-600', active: 'bg-slate-900 text-white' },
                     { id: 'ลูกบอล', label: 'กีฬาบอล', icon: <Target size={16} />, bg: 'bg-emerald-50', text: 'text-emerald-700', active: 'bg-emerald-500 text-white' },
+                    { id: 'กรีฑา', label: 'กรีฑา', icon: <Timer size={16} />, bg: 'bg-amber-50', text: 'text-amber-700', active: 'bg-amber-500 text-white' },
                     { id: 'ทีม', label: 'ทีม', icon: <Users size={16} />, bg: 'bg-violet-50', text: 'text-violet-700', active: 'bg-violet-600 text-white' },
                     { id: 'บุคคล', label: 'บุคคล', icon: <User size={16} />, bg: 'bg-rose-50', text: 'text-rose-700', active: 'bg-rose-500 text-white' }
                 ].map(cat => (
@@ -495,224 +507,128 @@ const App = () => {
                 ))}
             </div>
         </div>
-
-        <div className="max-w-6xl mx-auto px-6 mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-8 md:gap-12 pb-[180px]">
+        <div className="max-w-6xl mx-auto px-6 mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 pb-[180px]">
             {filteredSports.length > 0 ? filteredSports.map((sport, index) => {
                 const tournament = tournaments[sport.id];
                 const isFinished = tournament?.championId;
                 const champion = TEAMS.find(t => t.id === tournament?.championId);
-
-                const getPastelStyle = (type: string) => {
-                  switch(type) {
-                    case 'football': case 'futsal': 
-                      return { grad: 'from-emerald-50 to-emerald-100', iconBg: 'bg-emerald-500', text: 'text-emerald-900', accent: 'border-emerald-200' };
-                    case 'volleyball': case 'chairball': case 'handball': 
-                      return { grad: 'from-orange-50 to-orange-100', iconBg: 'bg-orange-500', text: 'text-orange-900', accent: 'border-orange-200' };
-                    case 'badminton': case 'petanque': 
-                      return { grad: 'from-indigo-50 to-indigo-100', iconBg: 'bg-indigo-500', text: 'text-indigo-900', accent: 'border-indigo-200' };
-                    case 'tugofwar': 
-                      return { grad: 'from-rose-50 to-rose-100', iconBg: 'bg-rose-500', text: 'text-rose-900', accent: 'border-rose-200' };
-                    default: 
-                      return { grad: 'from-blue-50 to-blue-100', iconBg: 'bg-blue-600', text: 'text-blue-900', accent: 'border-blue-200' };
-                  }
-                }
-
-                const style = getPastelStyle(sport.type);
-
+                const style = sport.type === 'athletics' ? { grad: 'from-amber-50 to-amber-100', iconBg: 'bg-amber-500', text: 'text-amber-900' } : (sport.type === 'football' || sport.type === 'futsal' ? { grad: 'from-emerald-50 to-emerald-100', iconBg: 'bg-emerald-500', text: 'text-emerald-900' } : { grad: 'from-blue-50 to-blue-100', iconBg: 'bg-blue-600', text: 'text-blue-900' });
                 return (
                     <div 
                         key={sport.id} 
                         onClick={() => setSelectedSportId(sport.id)} 
-                        className={`group relative overflow-hidden p-10 rounded-[4rem] transition-all cursor-pointer bg-gradient-to-br ${style.grad} border-4 ${isFinished ? 'border-green-300 shadow-2xl shadow-green-900/10' : 'border-white shadow-xl shadow-gray-900/5'} hover:shadow-3xl hover:-translate-y-4 hover:rotate-1 animate-slide-up`}
+                        className={`group relative overflow-hidden p-10 rounded-[3.5rem] transition-all cursor-pointer bg-gradient-to-br ${style.grad} border-4 ${isFinished ? 'border-green-300 shadow-2xl' : 'border-white shadow-xl'} hover:-translate-y-4 transition-all duration-500`}
                         style={{ animationDelay: `${index * 50}ms` }}
                     >
-                        <div className="absolute -right-8 -bottom-8 text-black/5 pointer-events-none group-hover:scale-110 group-hover:-rotate-12 transition-all duration-700">
-                            {getIcon(sport.iconName, 300)}
+                        <div className="absolute -right-8 -bottom-8 text-black/5 pointer-events-none group-hover:scale-125 transition-transform duration-700">
+                            {getIcon(sport.iconName, 240)}
                         </div>
-
-                        <div className="relative z-10 flex justify-between items-start mb-12">
-                            <div className={`p-6 rounded-[2.2rem] transition-all shadow-2xl text-white ${style.iconBg} group-hover:scale-110 group-hover:rotate-6`}>
-                                {getIcon(sport.iconName, 44)}
+                        <div className="relative z-10 flex justify-between items-start mb-10">
+                            <div className={`p-5 rounded-3xl transition-all shadow-xl text-white ${style.iconBg} group-hover:rotate-12`}>
+                                {getIcon(sport.iconName, 32)}
                             </div>
-                            {isFinished ? (
-                                <div className="flex items-center gap-2 bg-green-500 text-white px-6 py-2 rounded-full text-[10px] font-black shadow-lg border-2 border-white">
-                                    <Check size={16} strokeWidth={4} /> จบการแข่งขัน
-                                </div>
-                            ) : (
-                                <div className="flex items-center gap-2 bg-white/80 backdrop-blur-md text-blue-600 px-6 py-2 rounded-full text-[10px] font-black shadow-sm ring-4 ring-white/50">
-                                    <Activity size={16} className="animate-pulse" /> กำลังแข่งขัน
+                            {isFinished && (
+                                <div className="bg-green-500 text-white p-2 rounded-full shadow-lg ring-4 ring-white">
+                                    <Check size={16} strokeWidth={4} />
                                 </div>
                             )}
                         </div>
-
-                        <div className="relative z-10 mb-8">
-                            <h3 className={`text-3xl md:text-4xl font-black ${style.text} mb-3 tracking-tighter italic leading-tight`}>{sport.name}</h3>
-                            <div className="flex items-center gap-3 text-sm font-black text-black/40 uppercase tracking-[0.2em]">
-                                <Target size={18} /> {sport.category}
-                            </div>
+                        <div className="relative z-10">
+                            <h3 className={`text-3xl font-black ${style.text} mb-2 tracking-tighter italic leading-tight`}>{sport.name}</h3>
+                            <div className="text-xs font-black text-black/40 uppercase tracking-widest">{sport.category}</div>
                         </div>
-
-                        {isFinished && champion ? (
-                            <div className="relative z-10 mt-10 pt-10 border-t-4 border-dashed border-black/5 flex items-center justify-between group/footer">
-                                <div className="flex items-center gap-5">
-                                    <div className={`w-16 h-16 rounded-[1.8rem] flex items-center justify-center text-white font-black text-xs shadow-2xl ${champion.tailwindBg} ring-4 ring-white transform group-hover/footer:rotate-12 transition-transform px-1 text-center leading-tight`}>
+                        <div className="relative z-10 mt-10 pt-10 border-t-2 border-black/5 flex items-center justify-between">
+                             {isFinished && champion ? (
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-[10px] ${champion.tailwindBg} shadow-lg ring-2 ring-white`}>
                                         {champion.name.split(' ')[0]}
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest italic leading-none mb-1">Champion ๒๕๖๘</span>
-                                        <span className="text-2xl font-black text-gray-900 leading-none">{champion.name.split(' ')[0]}</span>
-                                    </div>
+                                    <div className="font-black text-gray-800 text-sm">ชนะเลิศ</div>
                                 </div>
-                                <div className="bg-yellow-400 p-4 rounded-full text-white shadow-xl shadow-yellow-200 transform group-hover/footer:-translate-y-2 transition-transform">
-                                    <Trophy size={32} fill="currentColor" />
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="relative z-10 mt-10 pt-10 border-t-2 border-black/5 flex items-center justify-between">
-                                <span className="text-xs font-black text-black/30 italic">คลิกเพื่อเข้าสู่แผงควบคุมสนาม</span>
-                                <div className="bg-white/80 p-3 rounded-2xl text-blue-600 shadow-xl group-hover:bg-blue-600 group-hover:text-white transition-all transform group-hover:scale-110">
-                                    <ChevronRight size={24} strokeWidth={3} />
-                                </div>
-                            </div>
-                        )}
+                             ) : (
+                                <span className="text-xs font-black text-black/30 italic">รอผลการแข่งขัน...</span>
+                             )}
+                             <div className="bg-white/80 p-3 rounded-2xl text-blue-600 shadow-xl group-hover:bg-blue-600 group-hover:text-white transition-all transform group-hover:scale-110">
+                                <ChevronRight size={20} strokeWidth={3} />
+                             </div>
+                        </div>
                     </div>
                 );
-            }) : (
-                <div className="col-span-full flex flex-col items-center justify-center py-32 text-gray-300">
-                    <div className="bg-white p-20 rounded-[5rem] shadow-2xl border-4 border-gray-50 mb-10 transform hover:rotate-6 transition-transform">
-                        <Search size={120} className="text-gray-100" />
-                    </div>
-                    <p className="text-4xl font-black text-gray-300 tracking-tight italic">ไม่พบการแข่งขันในสนามนี้...</p>
-                    <button onClick={() => {setSearchQuery(''); setSelectedCategory('ทั้งหมด');}} className="mt-10 text-blue-600 font-black text-2xl underline hover:text-blue-800 transition-colors">ล้างการค้นหา</button>
-                </div>
-            )}
+            }) : null}
         </div>
     </div>
   );
 
-  const RankingView = () => {
-    return (
-        <div className="max-w-6xl mx-auto px-6 py-12 animate-fade-in no-print pb-[180px]">
-            <div className="text-center mb-16">
-                <h2 className="text-6xl md:text-8xl font-black text-gray-900 tracking-tighter italic leading-none mb-4">สรุปตารางเหรียญ</h2>
-                <p className="text-gray-400 font-black text-xs uppercase tracking-[0.4em]">Official Medal Standings • 2568</p>
-            </div>
-
-            <div className="mb-20">
-                <OverallPodium standings={standingsData} />
-            </div>
-
-            <div className="mb-20">
-                <MedalTable standings={standingsData} />
-            </div>
-
-            {(Object.values(tournaments) as SportTournament[]).filter(t => t.championId).length > 0 && (
-                <div className="mt-24">
-                    <div className="flex items-center gap-4 mb-10">
-                        <div className="h-10 w-2 bg-pink-500 rounded-full"></div>
-                        <h3 className="text-3xl font-black text-gray-800 italic">ผลการแข่งขันล่าสุด</h3>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {(Object.values(tournaments) as SportTournament[])
-                            .filter(t => t.championId)
-                            .sort((a, b) => 0.5 - Math.random())
-                            .map((t, idx) => (
-                            <BroadcastCard 
-                                key={t.sportConfig.id}
-                                sportName={t.sportConfig.name}
-                                category={t.sportConfig.category}
-                                championId={t.championId}
-                                runnerUpId={t.runnerUpId}
-                                secondRunnerUpId={t.secondRunnerUpId}
-                                delay={idx * 100}
-                            />
-                        ))}
-                    </div>
-                </div>
-            )}
+  const RankingView = () => (
+    <div className="max-w-6xl mx-auto px-6 py-12 animate-fade-in no-print pb-[180px]">
+        <div className="text-center mb-16">
+            <h2 className="text-5xl md:text-7xl font-black text-gray-900 tracking-tighter italic leading-none mb-4 uppercase">Medal Standings</h2>
+            <p className="text-gray-400 font-black text-xs uppercase tracking-[0.4em]">Official Athletic Records ๒๕๖๘</p>
         </div>
-    );
-  };
+
+        <div className="mb-24">
+            <OverallPodium standings={overallStandings as any} />
+        </div>
+
+        {/* Section: Overall */}
+        <div className="mb-20">
+            <div className="flex items-center gap-4 mb-8 pl-4 border-l-8 border-indigo-600">
+                <Trophy size={32} className="text-indigo-600" />
+                <h3 className="text-3xl font-black text-gray-800 italic uppercase">คะแนนรวมทั้งหมด</h3>
+            </div>
+            <MedalTable standings={overallStandings as any} />
+        </div>
+
+        {/* Section: Sports (Team) */}
+        <div className="mb-20">
+            <div className="flex items-center gap-4 mb-8 pl-4 border-l-8 border-emerald-500">
+                <Activity size={32} className="text-emerald-500" />
+                <h3 className="text-3xl font-black text-gray-800 italic uppercase">อันดับคะแนนกีฬาประเภททีม</h3>
+            </div>
+            <MedalTable standings={sportsStandings as any} hideAthletics={true} />
+        </div>
+
+        {/* Section: Athletics */}
+        <div className="mb-24">
+            <div className="flex items-center gap-4 mb-8 pl-4 border-l-8 border-amber-500">
+                <Timer size={32} className="text-amber-500" />
+                <h3 className="text-3xl font-black text-gray-800 italic uppercase">อันดับคะแนนกรีฑาและกีฬาเด็กเล็ก</h3>
+            </div>
+            <MedalTable standings={athleticsStandings as any} hideSports={true} />
+        </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen text-gray-800 relative bg-[#fdfcfb] flex flex-col">
-      {/* Hidden Master Print View */}
       <div id="master-print-container" style={{ display: 'none' }}>
         <AllMatchesPrintView tournaments={tournaments} sportsList={SPORTS_LIST} />
       </div>
-      
-      {/* Reset Confirmation Modal */}
-      {showResetModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 no-print">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => !isSyncing && setShowResetModal(false)}></div>
-            <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl relative z-10 overflow-hidden animate-slide-up border-4 border-white">
-                <div className="bg-rose-500 p-10 text-white flex flex-col items-center">
-                    <div className="bg-white/20 p-6 rounded-full mb-6 ring-4 ring-white/10">
-                        {isSyncing ? <Loader2 size={64} className="animate-spin" /> : <AlertTriangle size={64} />}
-                    </div>
-                    <h3 className="text-3xl font-black mb-2 italic">{isSyncing ? 'กำลังเตรียมข้อมูลใหม่...' : 'ล้างข้อมูลทั้งหมด?'}</h3>
-                    <p className="text-rose-100 text-center text-sm font-medium leading-relaxed px-4">
-                        {isSyncing ? 'กรุณารอสักครู่ ระบบกำลังสื่อสารกับ Cloud Server' : 'ระวัง! การกระทำนี้จะล้างคะแนนและสายการแข่งขันทุกรายการเป็นค่าเริ่มต้น และซิงค์ข้อมูลใหม่ลง Cloud ทันที ข้อมูลเดิมจะสูญหายทั้งหมด'}
-                    </p>
-                </div>
-                <div className="p-8 flex gap-4">
-                    {!isSyncing && (
-                        <>
-                            <button onClick={() => setShowResetModal(false)} className="flex-1 py-4 rounded-2xl bg-gray-100 text-gray-700 font-black hover:bg-gray-200 transition-colors">ยกเลิก</button>
-                            <button onClick={handleResetAllData} className="flex-1 py-4 rounded-2xl bg-rose-600 text-white font-black shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all flex items-center justify-center gap-2">
-                                <Trash2 size={18} />
-                                <span>ยืนยันการล้าง</span>
-                            </button>
-                        </>
-                    )}
-                </div>
-            </div>
-        </div>
-      )}
-
-      {/* Print Confirmation Modal */}
-      {showPrintModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 no-print">
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-xl" onClick={() => !isPrinting && setShowPrintModal(false)}></div>
-            <div className="bg-white w-full max-lg rounded-[4.5rem] shadow-2xl relative z-10 overflow-hidden animate-slide-up border-4 border-white">
-                <div className="bg-gradient-to-br from-indigo-900 via-blue-800 to-indigo-950 p-12 text-white flex flex-col items-center">
-                    <div className="bg-white/10 p-8 rounded-[3rem] mb-8 shadow-inner ring-4 ring-white/5">{isPrinting ? <Loader2 size={64} className="animate-spin" /> : <Printer size={64} />}</div>
-                    <h3 className="text-5xl font-black mb-3 tracking-tight italic">พิมพ์รายงานรวม</h3>
-                    <p className="text-blue-200 font-black opacity-60 uppercase tracking-[0.3em] text-xs italic">Academic Record ๒๕๖๘</p>
-                    {!isPrinting && <button onClick={() => setShowPrintModal(true)} className="absolute top-10 right-10 text-white/40 hover:text-white transition-colors"><X size={40} /></button>}
-                </div>
-                <div className="p-12">
-                    <button onClick={handlePrintMasterReport} disabled={isPrinting} className="w-full flex items-center justify-between bg-blue-600 text-white p-10 rounded-[3rem] shadow-[0_25px_50px_rgba(37,99,235,0.4)] hover:scale-105 active:scale-95 transition-all disabled:opacity-50 group">
-                        <div className="flex items-center gap-8">
-                            <div className="bg-white/20 p-5 rounded-2xl group-hover:rotate-12 transition-transform"><FileText size={48} /></div>
-                            <div className="text-left">
-                                <div className="font-black text-3xl leading-none mb-2">ดาวน์โหลด PDF</div>
-                                <div className="text-sm font-black text-blue-100 opacity-80 italic uppercase tracking-wider">Full Master Report</div>
-                            </div>
-                        </div>
-                        <ChevronRight size={40} strokeWidth={3} />
-                    </button>
-                </div>
-            </div>
-        </div>
-      )}
 
       <main className="flex-grow">
         {isLoading ? (
             <div className="h-full min-h-[60vh] flex flex-col items-center justify-center">
-                <Loader2 size={64} className="animate-spin text-blue-500 mb-4" />
-                <span className="font-black text-gray-400 italic">กำลังโหลดข้อมูลสนาม...</span>
+                <div className="relative">
+                    <div className="w-24 h-24 border-8 border-blue-100 rounded-full animate-spin border-t-blue-600"></div>
+                    <Trophy size={32} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-600" />
+                </div>
+                <span className="font-black text-gray-400 italic mt-8 text-xl animate-pulse">กำลังโหลดข้อมูล...</span>
             </div>
         ) : selectedSportId ? (
             <div className="pt-10 px-6 animate-slide-up max-w-6xl mx-auto pb-12">
                 <div className="flex justify-between items-center mb-12 no-print">
-                    <button onClick={() => setSelectedSportId(null)} className="flex items-center gap-4 text-gray-800 font-black bg-white px-10 py-5 rounded-[2.5rem] shadow-xl hover:shadow-2xl hover:scale-105 transition-all active:scale-95 border-4 border-gray-50"><ChevronLeft size={28} className="text-blue-600" /><span>ย้อนกลับไปสนาม</span></button>
-                    <div className="hidden sm:flex items-center gap-4">
-                        <div className="h-12 w-2 bg-gradient-to-b from-blue-600 to-indigo-600 rounded-full"></div>
-                        <div className="flex flex-col"><span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Management Center</span><span className="text-lg font-black text-gray-900 leading-none">แผงจัดการคะแนนสายแข่ง</span></div>
-                    </div>
+                    <button onClick={() => setSelectedSportId(null)} className="flex items-center gap-4 text-gray-800 font-black bg-white px-8 py-4 rounded-[2rem] shadow-xl hover:scale-105 transition-all active:scale-95 border-2 border-gray-50"><ChevronLeft size={24} className="text-blue-600" /><span>กลับสู่สนาม</span></button>
                 </div>
-                {tournaments[selectedSportId] && <BracketView tournament={tournaments[selectedSportId]} onUpdateMatch={handleMatchUpdate} />}
+                {tournaments[selectedSportId] && (
+                    tournaments[selectedSportId].sportConfig.type === 'athletics' ? (
+                        <AthleticsResultView 
+                            tournament={tournaments[selectedSportId]} 
+                            onUpdateWinners={handleAthleticsUpdate} 
+                        />
+                    ) : (
+                        <BracketView tournament={tournaments[selectedSportId]} onUpdateMatch={handleMatchUpdate} />
+                    )
+                )}
             </div>
         ) : (
             <>
@@ -723,56 +639,51 @@ const App = () => {
         )}
       </main>
 
-      {/* Footer with Subtle Copyright */}
-      <footer className="w-full py-10 text-center no-print pb-[120px]">
-          <p className="text-gray-400/60 text-[10px] font-black uppercase tracking-[0.2em] italic">พัฒนาและออกแบบโดย Krukai &copy; 2025</p>
+      <footer className="w-full py-16 text-center no-print pb-[140px] relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-indigo-50/30 -z-10"></div>
+          <div className="max-w-4xl mx-auto px-6">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                  <div className="h-1 w-12 bg-gradient-to-r from-transparent to-pink-500 rounded-full"></div>
+                  <Sparkles className="text-pink-500 animate-pulse" size={24} />
+                  <div className="h-1 w-12 bg-gradient-to-l from-transparent to-pink-500 rounded-full"></div>
+              </div>
+              <p className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent text-[18px] font-black uppercase tracking-[0.4em] italic drop-shadow-sm leading-relaxed transition-all hover:tracking-[0.5em] duration-700 cursor-default">
+                  พัฒนาและออกแบบโดย Krukai &copy; ๒๕๖๘
+              </p>
+              <div className="mt-4 flex justify-center gap-6 text-[10px] font-black text-gray-400 tracking-widest uppercase italic">
+                  <span>Innovation</span>
+                  <span className="text-pink-300">•</span>
+                  <span>Education</span>
+                  <span className="text-pink-300">•</span>
+                  <span>Athletics</span>
+              </div>
+          </div>
       </footer>
 
-      {/* NEW Ergonomic Thumb-Curve Navigation Bar (80px) with Vibrant Pastel Colors */}
-      <nav className="fixed bottom-0 left-0 right-0 w-full h-[80px] z-[90] print:hidden no-print">
+      <nav className="fixed bottom-0 left-0 right-0 w-full h-[90px] z-[90] print:hidden no-print">
         <div className="absolute inset-0 w-full h-full pointer-events-none">
-            {/* Smooth Thumb Curve Path */}
-            <svg viewBox="0 0 400 80" className="w-full h-full filter drop-shadow-[0_-15px_30px_rgba(0,0,0,0.1)]" preserveAspectRatio="none">
-                <path 
-                  d="M0,80 L400,80 L400,20 Q200,-15 0,20 Z" 
-                  fill="rgba(255,255,255,0.98)" 
-                  className="backdrop-blur-xl"
-                />
+            <svg viewBox="0 0 400 90" className="w-full h-full filter drop-shadow-[0_-15px_30px_rgba(0,0,0,0.05)]" preserveAspectRatio="none">
+                <path d="M0,90 L400,90 L400,25 Q200,-15 0,25 Z" fill="rgba(255,255,255,0.98)" className="backdrop-blur-2xl" />
             </svg>
         </div>
-        
         <div className="relative h-full flex items-center justify-around px-8 max-w-2xl mx-auto">
-            {/* Home Tab - Pastel Blue */}
-            <button 
-                onClick={() => { setActiveTab('home'); setSelectedSportId(null); setSearchQuery(''); }} 
-                className="flex flex-col items-center justify-center w-20 relative transition-all duration-500"
-            >
-                <div className={`p-4 rounded-3xl transition-all duration-500 ${activeTab === 'home' ? 'bg-blue-400 text-white -translate-y-8 scale-110 shadow-[0_15px_30px_rgba(147,197,253,0.6)] ring-8 ring-white' : 'text-gray-300'}`}>
-                    <Home size={28} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
+            <button onClick={() => { setActiveTab('home'); setSelectedSportId(null); setSearchQuery(''); }} className="flex flex-col items-center justify-center w-20 relative group">
+                <div className={`p-4 rounded-[1.5rem] transition-all duration-500 ${activeTab === 'home' ? 'bg-blue-600 text-white -translate-y-10 scale-110 shadow-2xl ring-8 ring-white' : 'text-gray-300'}`}>
+                    <Home size={28} />
                 </div>
-                <span className={`absolute bottom-2 text-[9px] font-black uppercase tracking-widest transition-all duration-500 ${activeTab === 'home' ? 'text-blue-500 opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>Home</span>
+                <span className={`absolute bottom-3 text-[9px] font-black uppercase tracking-widest ${activeTab === 'home' ? 'text-blue-600' : 'opacity-0'}`}>Home</span>
             </button>
-
-            {/* Sports Tab - Pastel Orange */}
-            <button 
-                onClick={() => { setActiveTab('sports'); setSelectedSportId(null); }} 
-                className="flex flex-col items-center justify-center w-20 relative transition-all duration-500"
-            >
-                <div className={`p-4 rounded-3xl transition-all duration-500 ${activeTab === 'sports' ? 'bg-orange-300 text-white -translate-y-8 scale-110 shadow-[0_15px_30px_rgba(253,186,116,0.6)] ring-8 ring-white' : 'text-gray-300'}`}>
-                    <Trophy size={28} strokeWidth={activeTab === 'sports' ? 2.5 : 2} />
+            <button onClick={() => { setActiveTab('sports'); setSelectedSportId(null); }} className="flex flex-col items-center justify-center w-20 relative group">
+                <div className={`p-4 rounded-[1.5rem] transition-all duration-500 ${activeTab === 'sports' ? 'bg-orange-500 text-white -translate-y-10 scale-110 shadow-2xl ring-8 ring-white' : 'text-gray-300'}`}>
+                    <Trophy size={28} />
                 </div>
-                <span className={`absolute bottom-2 text-[9px] font-black uppercase tracking-widest transition-all duration-500 ${activeTab === 'sports' ? 'text-orange-500 opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>Arena</span>
+                <span className={`absolute bottom-3 text-[9px] font-black uppercase tracking-widest ${activeTab === 'sports' ? 'text-orange-500' : 'opacity-0'}`}>Arena</span>
             </button>
-
-            {/* Ranking Tab - Pastel Pink */}
-            <button 
-                onClick={() => { setActiveTab('ranking'); setSelectedSportId(null); setSearchQuery(''); }} 
-                className="flex flex-col items-center justify-center w-20 relative transition-all duration-500"
-            >
-                <div className={`p-4 rounded-3xl transition-all duration-500 ${activeTab === 'ranking' ? 'bg-pink-300 text-white -translate-y-8 scale-110 shadow-[0_15px_30px_rgba(249,168,212,0.6)] ring-8 ring-white' : 'text-gray-300'}`}>
-                    <Medal size={28} strokeWidth={activeTab === 'ranking' ? 2.5 : 2} />
+            <button onClick={() => { setActiveTab('ranking'); setSelectedSportId(null); setSearchQuery(''); }} className="flex flex-col items-center justify-center w-20 relative group">
+                <div className={`p-4 rounded-[1.5rem] transition-all duration-500 ${activeTab === 'ranking' ? 'bg-pink-500 text-white -translate-y-10 scale-110 shadow-2xl ring-8 ring-white' : 'text-gray-300'}`}>
+                    <Medal size={28} />
                 </div>
-                <span className={`absolute bottom-2 text-[9px] font-black uppercase tracking-widest transition-all duration-500 ${activeTab === 'ranking' ? 'text-pink-500 opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>Ranking</span>
+                <span className={`absolute bottom-3 text-[9px] font-black uppercase tracking-widest ${activeTab === 'ranking' ? 'text-pink-500' : 'opacity-0'}`}>Ranking</span>
             </button>
         </div>
       </nav>

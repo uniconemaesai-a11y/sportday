@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Team, SportConfig } from './types';
-import { Trophy, Medal, Flag, Users, User, Dna, Activity, Hexagon, Circle, Square } from 'lucide-react';
+import { Trophy, Medal, Flag, Users, User, Dna, Activity, Hexagon, Circle, Square, Timer, Footprints, Baby, Bike } from 'lucide-react';
 
 export const TEAMS: Team[] = [
   { 
@@ -54,6 +55,41 @@ const createSport = (id: string, name: string, category: string, icon: string, t
 });
 
 export const SPORTS_LIST: SportConfig[] = [
+  // --- กรีฑาและกีฬาเด็กเล็ก (Athletics) ---
+  createSport('a1', 'วิ่ง 20 เมตร', 'เตรียมอนุบาล', 'Timer', 'athletics'),
+  createSport('a2', 'ตักปิงปองใส่ตะกร้า', 'เตรียมอนุบาล', 'Circle', 'athletics'),
+  createSport('a3', 'กระโดดข้ามห่วง/ลอดสิ่งกีดขวาง', 'เตรียมอนุบาล', 'Activity', 'athletics'),
+  createSport('a4', 'แต่งตัวให้ลูก', 'เตรียมอนุบาล', 'User', 'athletics'),
+  createSport('a5', 'จักรยานขาไถ', '2-3 ขวบ', 'Bike', 'athletics'),
+  createSport('a6', 'วิ่งระยะ 30 ม.', 'อนุบาล 1', 'Timer', 'athletics'),
+  createSport('a7', 'วิ่งระยะ 40 ม.', 'อนุบาล 2', 'Timer', 'athletics'),
+  createSport('a8', 'วิ่งระยะ 50 ม.', 'อนุบาล 3', 'Timer', 'athletics'),
+  createSport('a9', 'วิ่งผลัด 4x25 ม.', 'อนุบาล 1-3', 'Users', 'athletics'),
+  createSport('a10', 'เดินตัวหนอน', 'อนุบาล', 'Footprints', 'athletics'),
+  createSport('a11', 'โยนบอลใส่ตะกร้า', 'อนุบาล', 'Circle', 'athletics'),
+  createSport('a12', 'จักรยานขาไถ', 'อนุบาล 1', 'Bike', 'athletics'),
+  createSport('a13', 'จักรยานขาไถ', 'อนุบาล 2', 'Bike', 'athletics'),
+  createSport('a14', 'จักรยานขาไถ', 'อนุบาล 3', 'Bike', 'athletics'),
+  createSport('a15', 'วิ่งระยะ 60 ม.', 'ชาย 8 ปี', 'Timer', 'athletics'),
+  createSport('a16', 'วิ่งระยะ 60 ม.', 'หญิง 8 ปี', 'Timer', 'athletics'),
+  createSport('a17', 'วิ่งระยะ 60 ม.', 'ชาย 10 ปี', 'Timer', 'athletics'),
+  createSport('a18', 'วิ่งระยะ 60 ม.', 'หญิง 10 ปี', 'Timer', 'athletics'),
+  createSport('a19', 'วิ่งระยะ 80 ม.', 'ชาย 8 ปี', 'Timer', 'athletics'),
+  createSport('a20', 'วิ่งระยะ 80 ม.', 'หญิง 8 ปี', 'Timer', 'athletics'),
+  createSport('a21', 'วิ่งระยะ 80 ม.', 'ชาย 10 ปี', 'Timer', 'athletics'),
+  createSport('a22', 'วิ่งระยะ 80 ม.', 'หญิง 10 ปี', 'Timer', 'athletics'),
+  createSport('a23', 'วิ่งระยะ 100 ม.', 'ชาย 10 ปี', 'Timer', 'athletics'),
+  createSport('a24', 'วิ่งระยะ 100 ม.', 'หญิง 10 ปี', 'Timer', 'athletics'),
+  createSport('a25', 'วิ่งระยะ 100 ม.', 'ชาย 12 ปี', 'Timer', 'athletics'),
+  createSport('a26', 'วิ่งระยะ 100 ม.', 'หญิง 12 ปี', 'Timer', 'athletics'),
+  createSport('a27', 'วิ่งผลัด 5x80 ม.', 'ชาย 8 ปี', 'Users', 'athletics'),
+  createSport('a28', 'วิ่งผลัด 5x80 ม.', 'หญิง 8 ปี', 'Users', 'athletics'),
+  createSport('a29', 'วิ่งผลัด 5x80 ม.', 'ชาย 10 ปี', 'Users', 'athletics'),
+  createSport('a30', 'วิ่งผลัด 5x80 ม.', 'หญิง 10 ปี', 'Users', 'athletics'),
+  createSport('a31', 'วิ่งผลัด 4x100 ม.', 'ชาย 12 ปี', 'Users', 'athletics'),
+  createSport('a32', 'วิ่งผลัด 4x100 ม.', 'หญิง 12 ปี', 'Users', 'athletics'),
+
+  // --- กีฬาประเภททีม (Bracket System) ---
   createSport('s1', 'ฟุตบอล', 'รุ่น 10 ปี ชาย', 'Activity', 'football'),
   createSport('s2', 'ฟุตบอล', 'รุ่น 12 ปี ชาย', 'Activity', 'football'),
   createSport('s3', 'แฮนด์บอล', 'รุ่น 12 ปี ชาย', 'Circle', 'handball'),
@@ -68,18 +104,12 @@ export const SPORTS_LIST: SportConfig[] = [
   createSport('s12', 'ฟุตซอล', 'รุ่น 12 ปี หญิง', 'Activity', 'futsal'),
   createSport('s13', 'ชักเย่อ', 'รุ่น 12 ปี ชาย', 'Users', 'tugofwar'),
   createSport('s14', 'ชักเย่อ', 'รุ่น 12 ปี หญิง', 'Users', 'tugofwar'),
-  createSport('s15', 'ชักกะเย่อสากล', 'ทีมชาย 8 คน', 'Users', 'tugofwar'),
-  createSport('s16', 'ชักกะเย่อสากล', 'ทีมหญิง 8 คน', 'Users', 'tugofwar'),
-  createSport('s17', 'เปตอง', 'ทีมชาย', 'Circle', 'petanque'),
-  createSport('s18', 'เปตอง', 'ทีมหญิง', 'Circle', 'petanque'),
-  createSport('s19', 'แบดมินตัน', 'ชายเดี่ยว', 'Dna', 'badminton'),
-  createSport('s20', 'แบดมินตัน', 'หญิงเดี่ยว', 'Dna', 'badminton'),
-  createSport('s21', 'แบดมินตัน', 'ชายคู่', 'Users', 'badminton'),
-  createSport('s22', 'แบดมินตัน', 'หญิงคู่', 'Users', 'badminton'),
-  createSport('s23', 'หมากรุก', 'บุคคลชาย', 'Square', 'chess'),
-  createSport('s24', 'หมากรุก', 'บุคคลหญิง', 'Square', 'chess'),
-  createSport('s25', 'หมากฮอส', 'บุคคลชาย', 'Square', 'checkers'),
-  createSport('s26', 'หมากฮอส', 'บุคคลหญิง', 'Square', 'checkers'),
+  createSport('s15', 'เปตอง', 'ทีมชาย', 'Circle', 'petanque'),
+  createSport('s16', 'เปตอง', 'ทีมหญิง', 'Circle', 'petanque'),
+  createSport('s17', 'แบดมินตัน', 'ชายเดี่ยว', 'Dna', 'badminton'),
+  createSport('s18', 'แบดมินตัน', 'หญิงเดี่ยว', 'Dna', 'badminton'),
+  createSport('s19', 'หมากรุก', 'บุคคลชาย', 'Square', 'chess'),
+  createSport('s20', 'หมากรุก', 'บุคคลหญิง', 'Square', 'chess'),
 ];
 
 export const THAI_NUMERALS = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
@@ -104,6 +134,10 @@ export const getIcon = (name: string, size: number = 24, className: string = '')
     case 'Trophy': return <Trophy {...props} />;
     case 'Medal': return <Medal {...props} />;
     case 'Flag': return <Flag {...props} />;
+    case 'Timer': return <Timer {...props} />;
+    case 'Footprints': return <Footprints {...props} />;
+    case 'Baby': return <Baby {...props} />;
+    case 'Bike': return <Bike {...props} />;
     default: return <Activity {...props} />;
   }
 };

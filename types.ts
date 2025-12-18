@@ -1,3 +1,4 @@
+
 // Data Models
 
 export type TeamColor = 'red' | 'green' | 'pink' | 'purple';
@@ -23,7 +24,8 @@ export type SportType =
   | 'petanque' 
   | 'badminton' 
   | 'chess' 
-  | 'checkers';
+  | 'checkers'
+  | 'athletics'; // ประเภทกรีฑาและกีฬาเด็กเล็ก
 
 export interface SportConfig {
   id: string;
@@ -35,13 +37,13 @@ export interface SportConfig {
 
 export type MatchStatus = 'scheduled' | 'playing' | 'finished';
 
-export type RoundType = 'semi' | 'third_place' | 'final';
+export type RoundType = 'semi' | 'third_place' | 'final' | 'direct';
 
 export interface Match {
   id: string;
   sportId: string;
   round: RoundType;
-  teamAId?: string; // Can be undefined if waiting for previous match
+  teamAId?: string; 
   teamBId?: string;
   scoreA: number;
   scoreB: number;
@@ -51,7 +53,7 @@ export interface Match {
 
 export interface SportTournament {
   sportConfig: SportConfig;
-  matches: Match[]; // Should contain 4 matches (2 semi, 1 third, 1 final)
+  matches: Match[]; 
   championId?: string;
   runnerUpId?: string;
   secondRunnerUpId?: string;
