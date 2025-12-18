@@ -262,7 +262,7 @@ const App = () => {
                 <div className="relative group shrink-0">
                     <div className="absolute -inset-4 bg-white/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     <div className="relative bg-white/95 backdrop-blur-md p-3 md:p-4 rounded-[2rem] md:rounded-[3rem] shadow-2xl ring-8 ring-white/20 animate-float">
-                        <img src="https://img2.pic.in.th/pic/Gemini_Generated_Image_u2dku8u2dku8u2dk.png" alt="Logo" className="w-20 h-20 md:w-32 md:h-32 object-contain" />
+                        <img src="https://img5.pic.in.th/file/secure-sv1/Gemini_Generated_Image_8s127m8s127m8s12.png" alt="Logo" className="w-20 h-20 md:w-32 md:h-32 object-contain" />
                     </div>
                 </div>
                 <div className="text-left">
