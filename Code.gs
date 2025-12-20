@@ -1,6 +1,6 @@
 
 /**
- * ระบบหลังบ้านกีฬาสีโรงเรียนเทศบาล ๑ วัดพรหมวิหาร ๒๕๖๘ (Official Version)
+ * ระบบหลังบ้านกีฬาสีโรงเรียนเทศบาล ๑ วัดพรหมวิหาร ๒๕๖๘ (Official Production Version)
  * -----------------------------------------------------------------------
  */
 
@@ -9,7 +9,7 @@ const SHEET_NAME = 'Matches';
 const HEADERS = ['id', 'sportId', 'round', 'teamAId', 'teamBId', 'scoreA', 'scoreB', 'status', 'winnerId', 'updatedAt'];
 
 /**
- * ฟังก์ชันสำหรับอ่านข้อมูล (GET)
+ * อ่านข้อมูล (GET)
  */
 function doGet(e) {
   try {
@@ -39,14 +39,13 @@ function doGet(e) {
 }
 
 /**
- * ฟังก์ชันสำหรับบันทึกข้อมูล (POST)
+ * บันทึกข้อมูล (POST)
  */
 function doPost(e) {
   const lock = LockService.getScriptLock();
   try {
-    // ล็อกสคริปต์ 30 วินาที เพื่อป้องกัน Race Condition
     if (!lock.tryLock(30000)) {
-      return createJSONOutput({ status: 'error', message: 'Server is currently busy. Please try again.' });
+      return createJSONOutput({ status: 'error', message: 'Server busy' });
     }
 
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -72,15 +71,13 @@ function doPost(e) {
       });
 
       if (rowNum) {
-        // อัปเดตแถวเดิมที่มีอยู่
         sheet.getRange(rowNum, 1, 1, HEADERS.length).setValues([rowData]);
       } else {
-        // เพิ่มแถวใหม่
         sheet.appendRow(rowData);
       }
     });
 
-    return createJSONOutput({ status: 'success', message: 'Data saved successfully', count: items.length });
+    return createJSONOutput({ status: 'success', count: items.length });
   } catch (err) {
     return createJSONOutput({ status: 'error', message: err.toString() });
   } finally {
@@ -88,9 +85,6 @@ function doPost(e) {
   }
 }
 
-/**
- * ฟังก์ชันช่วยจัดการ Sheet
- */
 function getOrCreateSheet(ss) {
   let sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) {
@@ -101,9 +95,6 @@ function getOrCreateSheet(ss) {
   return sheet;
 }
 
-/**
- * ฟังก์ชันช่วยสร้าง JSON Output
- */
 function createJSONOutput(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
