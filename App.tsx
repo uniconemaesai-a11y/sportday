@@ -9,6 +9,7 @@ import MedalTable from './components/MedalTable';
 import SportWinnersGrid from './components/SportWinnersGrid';
 import OverallPodium from './components/OverallPodium';
 import AllMatchesPrintView from './components/AllMatchesPrintView';
+import AllResultsPrintView from './components/AllResultsPrintView';
 import BroadcastCard from './components/BroadcastCard';
 import { Home, Trophy, Medal, ChevronLeft, RefreshCw, Check, Printer, FileText, ChevronRight, Sparkles, Activity, Star, Loader2, Search, LayoutGrid, Trash2, AlertTriangle, Timer, ShieldAlert, Key, ClipboardList, Target, Users, User, Crown, TrendingUp, Award, Zap } from 'lucide-react';
 
@@ -22,7 +23,10 @@ const App = () => {
   const [resetPasscode, setResetPasscode] = useState('');
   const [resetError, setResetError] = useState(false);
   const [tournaments, setTournaments] = useState<Record<string, SportTournament>>({});
+  
+  // Printing States
   const [isPrintingBrackets, setIsPrintingBrackets] = useState(false);
+  const [isPrintingResults, setIsPrintingResults] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ทั้งหมด');
@@ -164,8 +168,19 @@ const App = () => {
 
   const handlePrintAllBrackets = () => {
     setIsPrintingBrackets(true);
+    setIsPrintingResults(false);
     setTimeout(() => {
         window.print();
+        setIsPrintingBrackets(false);
+    }, 500);
+  };
+
+  const handlePrintAllResults = () => {
+    setIsPrintingResults(true);
+    setIsPrintingBrackets(false);
+    setTimeout(() => {
+        window.print();
+        setIsPrintingResults(false);
     }, 500);
   };
 
@@ -285,7 +300,11 @@ const App = () => {
                 <div className="flex flex-wrap items-center gap-2">
                     <button onClick={handlePrintAllBrackets} className="flex items-center gap-2 text-[10px] font-black px-6 py-3 rounded-full bg-blue-600 text-white shadow-lg hover:scale-105 transition-all">
                         <Printer size={14} />
-                        <span>พิมพ์ตารางสายแข่งรวม</span>
+                        <span>พิมพ์สายแข่งรวม</span>
+                    </button>
+                    <button onClick={handlePrintAllResults} className="flex items-center gap-2 text-[10px] font-black px-6 py-3 rounded-full bg-emerald-600 text-white shadow-lg hover:scale-105 transition-all">
+                        <FileText size={14} />
+                        <span>พิมพ์ใบสรุปผลรวม</span>
                     </button>
                     <button onClick={handleManualSync} disabled={isSyncing} className="flex items-center gap-2 text-[10px] font-black px-6 py-3 rounded-full bg-white text-gray-500 border border-gray-100 hover:shadow-md transition-all">
                         <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
@@ -480,8 +499,11 @@ const App = () => {
 
   return (
     <div className="min-h-screen text-gray-800 relative flex flex-col">
-      <div id="master-print-container" style={{ display: isPrintingBrackets ? 'block' : 'none' }}>
+      <div style={{ display: isPrintingBrackets ? 'block' : 'none' }}>
         <AllMatchesPrintView tournaments={tournaments} sportsList={SPORTS_LIST} />
+      </div>
+      <div style={{ display: isPrintingResults ? 'block' : 'none' }}>
+        <AllResultsPrintView tournaments={tournaments} sportsList={SPORTS_LIST} />
       </div>
 
       <GlobalHeader />
