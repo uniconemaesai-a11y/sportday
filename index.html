@@ -5,9 +5,8 @@
     <meta charset="UTF-8" />
     <link rel="icon" href="https://img5.pic.in.th/file/secure-sv1/Gemini_Generated_Image_8s127m8s127m8s12.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>การจัดการแข่งขันกีฬาภายในสถานศึกษา - สังกัดเทศบาลตำบลแม่สาย ประจำปีการศึกษา 2568 </title>
+    <title>กีฬาสีสัมพันธ์ ๒๕๖๘ - โรงเรียนเทศบาล 1 วัดพรหมวิหาร</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Sriracha&display=swap" rel="stylesheet">
@@ -17,9 +16,9 @@
       }
 
       body {
-        background: linear-gradient(-45deg, #fff5f5, #f0fff4, #f0f5ff, #fffaf0, #f5f3ff);
+        background: linear-gradient(-45deg, #fff5f8, #f0fffb, #f3f0ff, #fffdf0, #f0f7ff);
         background-size: 400% 400%;
-        animation: gradient-animation 20s ease infinite;
+        animation: gradient-animation 15s ease infinite;
         min-height: 100vh;
         margin: 0;
         overflow-x: hidden;
@@ -27,7 +26,7 @@
 
       h1, h2, h3, h4, h5, h6, .font-bold, .font-black, .font-semibold, b, strong {
         font-weight: normal !important;
-        text-shadow: 0.3px 0 0 currentColor;
+        text-shadow: 0.2px 0 0 currentColor;
       }
 
       @keyframes gradient-animation {
@@ -36,11 +35,14 @@
         100% { background-position: 0% 50%; }
       }
 
-      @keyframes shimmer {
-        0% { transform: translateX(-150%) skewX(-20deg); opacity: 0; }
-        10% { opacity: 0.5; }
-        50% { transform: translateX(150%) skewX(-20deg); opacity: 0; }
-        100% { transform: translateX(150%) skewX(-20deg); opacity: 0; }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+      .glass-card {
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
       }
 
       @keyframes shake {
@@ -52,62 +54,17 @@
         animation: shake 0.2s ease-in-out infinite;
       }
 
-      .no-scrollbar::-webkit-scrollbar { display: none; }
-      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-      .glass-card {
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.6);
-      }
-
-      @keyframes float {
-        0% { transform: translateY(0px) rotate(0deg); }
-        50% { transform: translateY(-10px) rotate(1deg); }
-        100% { transform: translateY(0px) rotate(0deg); }
-      }
-      .animate-float {
-        animation: float 8s ease-in-out infinite;
-      }
-
       @media print {
         body { 
           background: white !important; 
           animation: none !important; 
           color: black !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
         .no-print { display: none !important; }
         #root { padding: 0 !important; margin: 0 !important; }
-        
-        @page {
-          size: landscape;
-          margin: 1.5cm;
-        }
-
-        nav, header, button, .tab-bar, .no-print-element { 
-          display: none !important; 
-        }
-
-        #master-print-container { 
-          display: block !important; 
-          position: static !important; 
-          visibility: visible !important;
-          width: 100% !important;
-          padding: 0 !important;
-          margin: 0 !important;
-          background: white !important;
-        }
-
-        .break-inside-avoid {
-          page-break-inside: avoid;
-          break-inside: avoid;
-        }
-
-        .page-break {
-          page-break-before: always;
-          break-before: page;
-        }
+        @page { size: auto; margin: 1cm; }
       }
     </style>
   <script type="importmap">

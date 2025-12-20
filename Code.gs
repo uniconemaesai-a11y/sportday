@@ -1,12 +1,7 @@
 
 /**
- * ระบบหลังบ้านกีฬาสีโรงเรียนเทศบาล ๑ วัดพรหมวิหาร ๒๕๖๘ (Senior Pro Version)
+ * ระบบหลังบ้านกีฬาสีโรงเรียนเทศบาล ๑ วัดพรหมวิหาร ๒๕๖๘ (Official Version)
  * -----------------------------------------------------------------------
- * วัตถุประสงค์: จัดการฐานข้อมูลการแข่งขันกีฬาและกรีฑาแบบ Real-time
- * ฟีเจอร์: 
- * - รองรับการอัปเดตแบบจุดเดียว และแบบกลุ่ม (Batch Update)
- * - ระบบป้องกันข้อมูลซ้ำด้วย LockService
- * - รองรับคำสั่ง Reset ข้อมูลจากหน้าเว็บ
  */
 
 const SPREADSHEET_ID = '10q_mRMZxybLkDcVcnFygLHh3BZIkR9mQtQ7RLUOC1jo';
@@ -14,7 +9,7 @@ const SHEET_NAME = 'Matches';
 const HEADERS = ['id', 'sportId', 'round', 'teamAId', 'teamBId', 'scoreA', 'scoreB', 'status', 'winnerId', 'updatedAt'];
 
 /**
- * อ่านข้อมูลทั้งหมด (GET)
+ * ฟังก์ชันสำหรับอ่านข้อมูล (GET)
  */
 function doGet(e) {
   try {
@@ -31,7 +26,7 @@ function doGet(e) {
       let obj = {};
       headers.forEach((h, i) => {
         let val = row[i];
-        if (val === 'undefined' || val === '') val = undefined;
+        if (val === 'undefined' || val === '' || val === null) val = undefined;
         obj[h] = val;
       });
       return obj;
@@ -44,14 +39,14 @@ function doGet(e) {
 }
 
 /**
- * บันทึกข้อมูล (POST)
+ * ฟังก์ชันสำหรับบันทึกข้อมูล (POST)
  */
 function doPost(e) {
   const lock = LockService.getScriptLock();
   try {
-    // รอคิวสูงสุด 30 วินาที
+    // ล็อกสคริปต์ 30 วินาที เพื่อป้องกัน Race Condition
     if (!lock.tryLock(30000)) {
-      return createJSONOutput({ status: 'error', message: 'Server is busy. Please try again.' });
+      return createJSONOutput({ status: 'error', message: 'Server is currently busy. Please try again.' });
     }
 
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -59,25 +54,14 @@ function doPost(e) {
     const contents = JSON.parse(e.postData.contents);
     const items = Array.isArray(contents) ? contents : [contents];
     
-    // ดึงข้อมูลเดิมมาทำ Mapping เพื่อความรวดเร็ว
     const fullData = sheet.getDataRange().getValues();
     const idToRowMap = {};
     for (let i = 1; i < fullData.length; i++) {
-      const id = fullData[i][0]; // คอลัมน์ id อยู่ที่ 0
+      const id = fullData[i][0];
       if (id) idToRowMap[id] = i + 1;
     }
 
     const now = Utilities.formatDate(new Date(), "GMT+7", "yyyy-MM-dd HH:mm:ss");
-
-    // กรณีพิเศษ: ถ้าเป็นการ Reset (ส่งมาเยอะและข้อมูลว่าง) ให้พิจารณาล้าง Sheet เพื่อความสะอาด
-    const isResetOperation = items.length > 50; 
-    if (isResetOperation) {
-      sheet.clear();
-      sheet.appendRow(HEADERS);
-      sheet.setFrozenRows(1);
-      // เมื่อล้างแล้วต้อง Reset map ด้วย
-      Object.keys(idToRowMap).forEach(key => delete idToRowMap[key]);
-    }
 
     items.forEach(item => {
       const rowNum = idToRowMap[item.id];
@@ -87,17 +71,17 @@ function doPost(e) {
         return (val === undefined || val === null || val === 'undefined') ? '' : val;
       });
 
-      if (rowNum && !isResetOperation) {
+      if (rowNum) {
+        // อัปเดตแถวเดิมที่มีอยู่
         sheet.getRange(rowNum, 1, 1, HEADERS.length).setValues([rowData]);
       } else {
+        // เพิ่มแถวใหม่
         sheet.appendRow(rowData);
       }
     });
 
-    return createJSONOutput({ status: 'success', count: items.length });
-
+    return createJSONOutput({ status: 'success', message: 'Data saved successfully', count: items.length });
   } catch (err) {
-    console.error(err);
     return createJSONOutput({ status: 'error', message: err.toString() });
   } finally {
     lock.releaseLock();
@@ -105,7 +89,7 @@ function doPost(e) {
 }
 
 /**
- * ช่วยจัดการเรื่องการหาหรือสร้าง Sheet
+ * ฟังก์ชันช่วยจัดการ Sheet
  */
 function getOrCreateSheet(ss) {
   let sheet = ss.getSheetByName(SHEET_NAME);
@@ -118,7 +102,7 @@ function getOrCreateSheet(ss) {
 }
 
 /**
- * Helper: สร้าง JSON Output
+ * ฟังก์ชันช่วยสร้าง JSON Output
  */
 function createJSONOutput(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
