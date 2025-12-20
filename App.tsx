@@ -300,7 +300,7 @@ const App = () => {
                 <div className="flex flex-wrap items-center gap-2">
                     <button onClick={handlePrintAllBrackets} className="flex items-center gap-2 text-[10px] font-black px-6 py-3 rounded-full bg-blue-600 text-white shadow-lg hover:scale-105 transition-all">
                         <Printer size={14} />
-                        <span>พิมพ์สายแข่งรวม</span>
+                        <span>พิมพ์สายแข่งรวมทั้งหมด</span>
                     </button>
                     <button onClick={handlePrintAllResults} className="flex items-center gap-2 text-[10px] font-black px-6 py-3 rounded-full bg-emerald-600 text-white shadow-lg hover:scale-105 transition-all">
                         <FileText size={14} />
@@ -308,17 +308,18 @@ const App = () => {
                     </button>
                     <button onClick={handleManualSync} disabled={isSyncing} className="flex items-center gap-2 text-[10px] font-black px-6 py-3 rounded-full bg-white text-gray-500 border border-gray-100 hover:shadow-md transition-all">
                         <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
-                        <span>อัปเดต</span>
+                        <span>อัปเดตข้อมูล</span>
                     </button>
                     <button onClick={() => setShowResetModal(true)} className="flex items-center gap-2 text-[10px] font-black px-6 py-3 rounded-full bg-rose-50 text-rose-500 border border-rose-100 transition-all hover:bg-rose-100">
                         <Trash2 size={12} />
-                        <span>ล้างข้อมูล</span>
+                        <span>ล้างข้อมูลสนาม</span>
                     </button>
                 </div>
             </div>
         </div>
 
         <div className="max-w-7xl mx-auto px-6 py-12">
+            {/* ส่วนแสดงคะแนนรวม */}
             <section className="mb-20">
                 <div className="flex items-center gap-4 mb-10 pl-2">
                     <div className="bg-yellow-100 p-3.5 rounded-[1.5rem] text-yellow-600 shadow-sm border border-yellow-200"><Trophy size={32} /></div>
@@ -357,6 +358,7 @@ const App = () => {
                 </div>
             </section>
 
+            {/* Hall of Fame */}
             <section className="mb-20">
                 <div className="flex items-center justify-between mb-12 pl-2">
                     <div className="flex items-center gap-4">
@@ -393,6 +395,7 @@ const App = () => {
                 </div>
             </section>
 
+            {/* Arena Entrance */}
             <div className="group relative no-print mb-16">
                 <div className="absolute -inset-4 bg-gradient-to-r from-blue-500 via-indigo-400 to-cyan-400 rounded-[3rem] blur opacity-20 group-hover:opacity-30 transition duration-1000"></div>
                 <div className="relative bg-gradient-to-r from-gray-900 via-slate-900 to-blue-900 rounded-[2.5rem] h-[100px] shadow-2xl overflow-hidden flex items-center justify-between px-12 border border-white/10 backdrop-blur-sm">

@@ -44,6 +44,7 @@ function doGet(e) {
 function doPost(e) {
   const lock = LockService.getScriptLock();
   try {
+    // ล็อกระบบ 30 วินาทีเพื่อรอคิวการเขียนข้อมูล
     if (!lock.tryLock(30000)) {
       return createJSONOutput({ status: 'error', message: 'Server busy' });
     }
@@ -67,6 +68,7 @@ function doPost(e) {
       const rowData = HEADERS.map(h => {
         if (h === 'updatedAt') return now;
         let val = item[h];
+        // Clean data for Sheet
         return (val === undefined || val === null || val === 'undefined') ? '' : val;
       });
 
@@ -77,7 +79,7 @@ function doPost(e) {
       }
     });
 
-    return createJSONOutput({ status: 'success', count: items.length });
+    return createJSONOutput({ status: 'success', message: 'บันทึกข้อมูลเรียบร้อย', count: items.length });
   } catch (err) {
     return createJSONOutput({ status: 'error', message: err.toString() });
   } finally {
