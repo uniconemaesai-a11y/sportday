@@ -169,10 +169,11 @@ const App = () => {
   const handlePrintAllBrackets = () => {
     setIsPrintingBrackets(true);
     setIsPrintingResults(false);
+    // เพิ่ม Delay เล็กน้อยเพื่อให้ React Render หน้าพิมพ์เสร็จก่อนสั่ง Print
     setTimeout(() => {
         window.print();
         setIsPrintingBrackets(false);
-    }, 500);
+    }, 800);
   };
 
   const handlePrintAllResults = () => {
@@ -181,7 +182,7 @@ const App = () => {
     setTimeout(() => {
         window.print();
         setIsPrintingResults(false);
-    }, 500);
+    }, 800);
   };
 
   const standingsData = useMemo(() => {
@@ -502,12 +503,19 @@ const App = () => {
 
   return (
     <div className="min-h-screen text-gray-800 relative flex flex-col">
-      <div style={{ display: isPrintingBrackets ? 'block' : 'none' }}>
-        <AllMatchesPrintView tournaments={tournaments} sportsList={SPORTS_LIST} />
-      </div>
-      <div style={{ display: isPrintingResults ? 'block' : 'none' }}>
-        <AllResultsPrintView tournaments={tournaments} sportsList={SPORTS_LIST} />
-      </div>
+      {/* Container สำหรับหน้าพิมพ์สายแข่งรวม */}
+      {isPrintingBrackets && (
+        <div className="fixed inset-0 z-[9999] bg-white overflow-auto print:relative print:z-auto">
+          <AllMatchesPrintView tournaments={tournaments} sportsList={SPORTS_LIST} />
+        </div>
+      )}
+      
+      {/* Container สำหรับหน้าพิมพ์สรุปผลรวม */}
+      {isPrintingResults && (
+        <div className="fixed inset-0 z-[9999] bg-white overflow-auto print:relative print:z-auto">
+          <AllResultsPrintView tournaments={tournaments} sportsList={SPORTS_LIST} />
+        </div>
+      )}
 
       <GlobalHeader />
 
