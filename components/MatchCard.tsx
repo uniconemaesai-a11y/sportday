@@ -26,6 +26,9 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, title, onUpdate, isEditabl
   const teamA = TEAMS.find(t => t.id === match.teamAId);
   const teamB = TEAMS.find(t => t.id === match.teamBId);
 
+  // A match is truly ready for scoring if both team IDs exist AND are valid teams in our list
+  const isReady = !!(match.teamAId && match.teamBId && teamA && teamB);
+
   const handlePreSave = () => {
     if (localScoreA === localScoreB) {
       setErrorMessage("ห้ามเสมอ");
@@ -122,8 +125,6 @@ const MatchCard: React.FC<MatchCardProps> = ({ match, title, onUpdate, isEditabl
       </div>
     );
   };
-
-  const isReady = match.teamAId && match.teamBId;
 
   return (
     <div className={`bg-white/80 backdrop-blur-xl rounded-[3rem] shadow-2xl border-4 border-white p-5 md:p-8 relative overflow-hidden transition-all duration-500 ${isEditing ? 'ring-[16px] ring-blue-50/50' : ''}`}>
