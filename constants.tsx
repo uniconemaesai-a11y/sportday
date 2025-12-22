@@ -110,6 +110,8 @@ export const SPORTS_LIST: SportConfig[] = [
   createSport('s18', 'แบดมินตัน', 'หญิงเดี่ยว', 'Dna', 'badminton'),
   createSport('s19', 'หมากรุก', 'บุคคลชาย', 'Square', 'chess'),
   createSport('s20', 'หมากรุก', 'บุคคลหญิง', 'Square', 'chess'),
+  createSport('s21', 'หมากฮอต', 'บุคคลชาย', 'Square', 'checkers'),
+  createSport('s22', 'หมากฮอต', 'บุคคลหญิง', 'Square', 'checkers'),
 ];
 
 export const THAI_NUMERALS = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
