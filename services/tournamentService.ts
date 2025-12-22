@@ -1,8 +1,8 @@
+
 import { SportConfig, SportTournament, Match, Team } from '../types';
 import { TEAMS } from '../constants';
 
 // Spreadsheet Configuration
-const SPREADSHEET_ID = '10q_mRMZxybLkDcVcnFygLHh3BZIkR9mQtQ7RLUOC1jo';
 const STORAGE_KEY = 'sports_day_data_2568';
 
 // --- CONFIGURATION ---
@@ -66,8 +66,34 @@ const shuffleTeams = (teams: Team[]): Team[] => {
   return shuffled;
 };
 
+// Helper to get fixed teams for specific sports
+export const getFixedTeamPairings = (sportId: string) => {
+  if (sportId === 's5') { // แชร์บอล 8 ปี ชาย
+    return { a1: 't4', b1: 't3', a2: 't2', b2: 't1' }; // ม่วง พบ ชมพู, เขียว พบ แดง
+  }
+  if (sportId === 's9') { // วอลเลย์บอล ชาย
+    return { a1: 't4', b1: 't2', a2: 't3', b2: 't1' }; // ม่วง พบ เขียว, ชมพู พบ แดง
+  }
+  if (sportId === 's10') { // วอลเลย์บอล หญิง
+    return { a1: 't2', b1: 't1', a2: 't3', b2: 't4' }; // เขียว พบ แดง, ชมพู พบ ม่วง
+  }
+  return null;
+};
+
 export const initializeTournament = (sport: SportConfig): SportTournament => {
-  const randomTeams = shuffleTeams(TEAMS);
+  let teamA1, teamB1, teamA2, teamB2;
+
+  const fixed = getFixedTeamPairings(sport.id);
+  if (fixed) {
+    teamA1 = fixed.a1; teamB1 = fixed.b1;
+    teamA2 = fixed.a2; teamB2 = fixed.b2;
+  } else {
+    const randomTeams = shuffleTeams(TEAMS);
+    teamA1 = randomTeams[0].id;
+    teamB1 = randomTeams[1].id;
+    teamA2 = randomTeams[2].id;
+    teamB2 = randomTeams[3].id;
+  }
 
   const semi1Id = `m_${sport.id}_s1`;
   const semi2Id = `m_${sport.id}_s2`;
@@ -78,8 +104,8 @@ export const initializeTournament = (sport: SportConfig): SportTournament => {
     id: semi1Id,
     sportId: sport.id,
     round: 'semi',
-    teamAId: randomTeams[0].id,
-    teamBId: randomTeams[1].id,
+    teamAId: teamA1,
+    teamBId: teamB1,
     scoreA: 0,
     scoreB: 0,
     status: 'scheduled'
@@ -89,8 +115,8 @@ export const initializeTournament = (sport: SportConfig): SportTournament => {
     id: semi2Id,
     sportId: sport.id,
     round: 'semi',
-    teamAId: randomTeams[2].id,
-    teamBId: randomTeams[3].id,
+    teamAId: teamA2,
+    teamBId: teamB2,
     scoreA: 0,
     scoreB: 0,
     status: 'scheduled'
@@ -178,13 +204,28 @@ export const mergeSheetData = (currentData: Record<string, SportTournament>, she
             if (matchIndex !== -1) {
                 const match = newData[sportId].matches[matchIndex];
                 
+                // Allow fixed teams to be enforced even if row data is empty for semi finals
+                const fixed = getFixedTeamPairings(sportId);
+                let rowTeamAId = (row.teamAId === 'undefined' || row.teamAId === '') ? undefined : row.teamAId;
+                let rowTeamBId = (row.teamBId === 'undefined' || row.teamBId === '') ? undefined : row.teamBId;
+                
+                if (fixed && match.round === 'semi' && !rowTeamAId && !rowTeamBId) {
+                    if (match.id.endsWith('s1')) {
+                        rowTeamAId = fixed.a1;
+                        rowTeamBId = fixed.b1;
+                    } else if (match.id.endsWith('s2')) {
+                        rowTeamAId = fixed.a2;
+                        rowTeamBId = fixed.b2;
+                    }
+                }
+
                 const isDifferent = 
                     match.status !== row.status || 
                     match.scoreA !== parseInt(row.scoreA) || 
                     match.scoreB !== parseInt(row.scoreB) ||
                     match.winnerId !== (row.winnerId === 'undefined' || row.winnerId === '' ? undefined : row.winnerId) ||
-                    match.teamAId !== (row.teamAId === 'undefined' || row.teamAId === '' ? undefined : row.teamAId) ||
-                    match.teamBId !== (row.teamBId === 'undefined' || row.teamBId === '' ? undefined : row.teamBId);
+                    match.teamAId !== rowTeamAId ||
+                    match.teamBId !== rowTeamBId;
 
                 if (isDifferent) {
                      const updatedMatch: Match = {
@@ -193,8 +234,8 @@ export const mergeSheetData = (currentData: Record<string, SportTournament>, she
                          scoreB: parseInt(row.scoreB || '0'),
                          status: row.status as any,
                          winnerId: row.winnerId === 'undefined' || row.winnerId === '' ? undefined : row.winnerId,
-                         teamAId: row.teamAId === 'undefined' || row.teamAId === '' ? undefined : row.teamAId,
-                         teamBId: row.teamBId === 'undefined' || row.teamBId === '' ? undefined : row.teamBId
+                         teamAId: rowTeamAId,
+                         teamBId: rowTeamBId
                      };
                      newData[sportId] = updateTournamentMatch(newData[sportId], updatedMatch);
                 }
