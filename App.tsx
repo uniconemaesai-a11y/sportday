@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { SPORTS_LIST, getIcon, toThaiNumber, TEAMS } from './constants';
 import { SportTournament, Match, SportConfig } from './types';
-import { initializeTournament, updateTournamentMatch, saveToLocal, loadFromLocal, fetchFromSheets, mergeSheetData, saveToCloud } from './services/tournamentService';
+import { initializeTournament, updateTournamentMatch, saveToLocal, loadFromLocal, fetchFromSheets, mergeSheetData, saveToCloud, getFixedTeamPairings } from './services/tournamentService';
 import BracketView from './components/BracketView';
 import AthleticsResultView from './components/AthleticsResultView';
 import MedalTable from './components/MedalTable';
@@ -31,6 +31,30 @@ const App = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ทั้งหมด');
 
+  // Enforce pairings for s5, s9, s10 if they are missing
+  const enforcePairings = (data: Record<string, SportTournament>) => {
+    const newData = { ...data };
+    ['s5', 's9', 's10'].forEach(id => {
+      if (newData[id]) {
+        const fixed = getFixedTeamPairings(id);
+        if (fixed) {
+          const s1 = newData[id].matches.find(m => m.id.endsWith('s1'));
+          const s2 = newData[id].matches.find(m => m.id.endsWith('s2'));
+          
+          if (s1 && (!s1.teamAId || !s1.teamBId)) {
+            s1.teamAId = fixed.a1;
+            s1.teamBId = fixed.b1;
+          }
+          if (s2 && (!s2.teamAId || !s2.teamBId)) {
+            s2.teamAId = fixed.a2;
+            s2.teamBId = fixed.b2;
+          }
+        }
+      }
+    });
+    return newData;
+  };
+
   useEffect(() => {
     const loadData = async () => {
         setIsLoading(true);
@@ -45,12 +69,16 @@ const App = () => {
             }
         });
 
+        // Enforce the requested fixed pairings on load
+        initialData = enforcePairings(initialData);
+
         try {
             const sheetRows = await fetchFromSheets();
             if (sheetRows && sheetRows.length > 0) {
                 const merged = mergeSheetData(initialData, sheetRows);
-                setTournaments(merged);
-                saveToLocal(merged);
+                const finalData = enforcePairings(merged);
+                setTournaments(finalData);
+                saveToLocal(finalData);
             } else {
                 setTournaments(initialData);
                 const allMatches = (Object.values(initialData) as SportTournament[]).flatMap(t => t.matches);
@@ -123,8 +151,9 @@ const App = () => {
         if (sheetRows && sheetRows.length > 0) {
             setTournaments(prev => {
                 const merged = mergeSheetData(prev, sheetRows);
-                saveToLocal(merged);
-                return merged;
+                const finalData = enforcePairings(merged);
+                saveToLocal(finalData);
+                return finalData;
             });
             setSyncStatus('success');
             setTimeout(() => setSyncStatus('idle'), 3000);
@@ -153,10 +182,11 @@ const App = () => {
           initialData[sport.id] = initializeTournament(sport);
       });
       
-      setTournaments(initialData);
-      saveToLocal(initialData);
+      const finalData = enforcePairings(initialData);
+      setTournaments(finalData);
+      saveToLocal(finalData);
       
-      const allMatches = (Object.values(initialData) as SportTournament[]).flatMap(t => t.matches);
+      const allMatches = (Object.values(finalData) as SportTournament[]).flatMap(t => t.matches);
       await saveToCloud(allMatches);
       
       setIsSyncing(false);
@@ -169,7 +199,6 @@ const App = () => {
   const handlePrintAllBrackets = () => {
     setIsPrintingBrackets(true);
     setIsPrintingResults(false);
-    // เพิ่ม Delay เล็กน้อยเพื่อให้ React Render หน้าพิมพ์เสร็จก่อนสั่ง Print
     setTimeout(() => {
         window.print();
         setIsPrintingBrackets(false);
@@ -320,7 +349,7 @@ const App = () => {
         </div>
 
         <div className="max-w-7xl mx-auto px-6 py-12">
-            {/* ส่วนแสดงคะแนนรวม */}
+            {/* Overall Scores */}
             <section className="mb-20">
                 <div className="flex items-center gap-4 mb-10 pl-2">
                     <div className="bg-yellow-100 p-3.5 rounded-[1.5rem] text-yellow-600 shadow-sm border border-yellow-200"><Trophy size={32} /></div>
@@ -503,14 +532,14 @@ const App = () => {
 
   return (
     <div className="min-h-screen text-gray-800 relative flex flex-col">
-      {/* Container สำหรับหน้าพิมพ์สายแข่งรวม */}
+      {/* Master Print Container */}
       {isPrintingBrackets && (
         <div className="fixed inset-0 z-[9999] bg-white overflow-auto print:relative print:z-auto">
           <AllMatchesPrintView tournaments={tournaments} sportsList={SPORTS_LIST} />
         </div>
       )}
       
-      {/* Container สำหรับหน้าพิมพ์สรุปผลรวม */}
+      {/* Summary Print Container */}
       {isPrintingResults && (
         <div className="fixed inset-0 z-[9999] bg-white overflow-auto print:relative print:z-auto">
           <AllResultsPrintView tournaments={tournaments} sportsList={SPORTS_LIST} />
