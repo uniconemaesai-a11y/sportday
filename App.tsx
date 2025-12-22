@@ -336,10 +336,6 @@ const App = () => {
                         <FileText size={14} />
                         <span>พิมพ์ใบสรุปผลรวม</span>
                     </button>
-                    <button onClick={handleManualSync} disabled={isSyncing} className="flex items-center gap-2 text-[10px] font-black px-6 py-3 rounded-full bg-white text-gray-500 border border-gray-100 hover:shadow-md transition-all">
-                        <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
-                        <span>อัปเดตข้อมูล</span>
-                    </button>
                     <button onClick={() => setShowResetModal(true)} className="flex items-center gap-2 text-[10px] font-black px-6 py-3 rounded-full bg-rose-50 text-rose-500 border border-rose-100 transition-all hover:bg-rose-100">
                         <Trash2 size={12} />
                         <span>ล้างข้อมูลสนาม</span>
